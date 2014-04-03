@@ -173,6 +173,20 @@ int main(int argc, char** argv)
 		"ARGB2101010"
 	};
 
+	SDL_BlendMode blendModes[] = {
+		SDL_BLENDMODE_NONE,
+		SDL_BLENDMODE_BLEND,
+		SDL_BLENDMODE_ADD,
+		SDL_BLENDMODE_MOD
+	};
+	char* blendNames[] = {
+		"NONE",
+		"BLEND",
+		"ADD",
+		"MOD"
+	};
+	int current_blend = 0;
+
 	SDL_Texture* textures[ sizeof(formats)/sizeof(Uint32) ];
 	
 	for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
@@ -183,7 +197,7 @@ int main(int argc, char** argv)
 		//textures[i] = SDL_CreateTexture( renderer, formats[i], SDL_TEXTUREACCESS_STREAMING, srf->w, srf->h );
 		textures[i] = SDL_CreateTextureFromSurface(renderer, srf2 );
 
-		//SDL_SetTextureBlendMode(textures[i], SDL_BLENDMODE_MOD);
+		SDL_SetTextureBlendMode(textures[i], blendModes[current_blend]);
 		SDL_FreeSurface( srf2 );
 
 		if( !textures[i] ){
@@ -205,6 +219,7 @@ int main(int argc, char** argv)
 	int ret = 0;
 	int quit = 0;
 	while( !quit ) {
+		SDLTest_DrawString( renderer, 8, 8, blendNames[current_blend] );
 		for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
 			int x=30+(i%8)*55;
 			int y=30+(i/8)*75;
@@ -219,11 +234,25 @@ int main(int argc, char** argv)
 			SDL_RenderCopy( renderer, textures[i], NULL, &dst );
 			SDLTest_DrawString( renderer, dst.x,dst.y+55 + (i%2==0 ? 10 : 0), fmt_names[i] );
 			while (SDL_PollEvent(&e)){
-				if (e.type == SDL_QUIT)
-					quit = 1;
+				switch( e.type ) {
+				case SDL_QUIT: 
+					quit = 1; 
+					break;
+				case SDL_KEYDOWN: 
+					current_blend = (current_blend+1)%4;
+					for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
+						SDL_SetTextureBlendMode(textures[i], blendModes[current_blend]);
+					}
+					break;
+				}
 			}
 		}
+
 		SDL_RenderPresent(renderer);
+
+		SDL_SetRenderDrawColor(renderer, 160, 160, 160, 255);
+		SDL_RenderClear(renderer);
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	}
 	return 0;
