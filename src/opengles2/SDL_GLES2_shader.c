@@ -32,7 +32,7 @@ void SDL_GLES2_init() {
 	char color_conv_fmt[] = 
 	"vec4 convertColor(int type, vec4 color) {\n"
 	"	vec4 ret = vec4(color.b, color.g, color.r, color.a);\n"
-	"	if( type==%d || /*ABGR4444*/\n" /*BGR formats*/
+	"	if( type==%d || /*ABGR4444*/\n" //BGR formats
 	"		type==%d || /*BGR555*/\n"
 	"		type==%d || /*BGRA4444*/\n"
 	"		type==%d || /*ABGR1555*/\n"
@@ -47,7 +47,7 @@ void SDL_GLES2_init() {
 	"		ret.r = color.r;\n"
 	"		ret.b = color.b;\n"
 	"	}\n"
-	"	if( type==%d || /*BGR555*/\n" /*Formats without alpha*/
+	"	if( type==%d || /*BGR555*/\n" //Formats without alpha
 	"		type==%d || /*BGR565*/\n"
 	"		type==%d || /*BGR24*/\n"
 	"		type==%d || /*BGR888*/\n"
@@ -89,7 +89,7 @@ void SDL_GLES2_init() {
 	);
 	is_init = 1;
 
-	printf("%s",color_conv);
+	printf("%s" , color_conv );
 
 }
 
@@ -320,11 +320,36 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 	}else{
 		if( shader_data->color ) SDL_GLES2_setUniform_f4( shader_data->color, 1,1,1,1 );
 	}
+
+	shader->bindShader(shader);
 	if( shader_data->color_mode ) {
 		SDL_GLES2_setUniform_i( shader_data->color_mode, texture->format);
 	}
-	
-	shader->bindShader(shader);
+
+    if (texture->blendMode != data->current.blendMode) {
+		switch (texture->blendMode) {
+			case SDL_BLENDMODE_NONE:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				glDisable(GL_BLEND);
+				break;
+			case SDL_BLENDMODE_BLEND:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
+				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+				break;
+			case SDL_BLENDMODE_ADD:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
+				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+				break;
+			case SDL_BLENDMODE_MOD:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
+				glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
+				break;
+		}
+	}
+
 
     vertices[0] = dstrect->x;
     vertices[1] = (dstrect->y + dstrect->h);
@@ -348,7 +373,38 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
     data->glVertexAttribPointer(GLES2_ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, GL_FALSE, 0, texCoords);
     data->glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+
 	//shader->unbindShader(shader);
+	if( data->current_program ) {
+		//glUseProgram( data->current_program->id ); //XXX
+	}
+	//FIXME hack, changes SDLs internal shader to retrieve a known state
+	SDL_RenderDrawPoint(shader->renderer, -1,-1 );
+	//hack end
+	
+    if (texture->blendMode != data->current.blendMode) {
+		switch (data->current.blendMode) {
+			case SDL_BLENDMODE_NONE:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				glDisable(GL_BLEND);
+				break;
+			case SDL_BLENDMODE_BLEND:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
+				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+				break;
+			case SDL_BLENDMODE_ADD:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
+				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+				break;
+			case SDL_BLENDMODE_MOD:
+				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
+				glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
+				break;
+		}
+	}
 	return 0;
 }
 

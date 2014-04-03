@@ -65,6 +65,8 @@ int main(int argc, char** argv)
 
 	SDL_RenderSetLogicalSize(renderer, width, height);
 
+	SDL_SetWindowTitle( screen, renderer->info.name );
+
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderClear(renderer);
 
@@ -246,6 +248,8 @@ int main(int argc, char** argv)
 					break;
 				}
 			}
+
+
 		}
 
 		SDL_RenderPresent(renderer);

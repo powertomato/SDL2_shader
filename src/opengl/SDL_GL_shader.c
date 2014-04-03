@@ -320,7 +320,6 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 	SDL_GL_MakeCurrent(shader->renderer->window, data->context);
 	SDL_GL_BindTexture(texture, &width, &height );
 
-	shader->bindShader(shader);
 	if (texture->modMode ) {
 		if( shader_data->color ) SDL_GL_setUniform_f4( shader_data->color,
 				(GLfloat) texture->r * inv255f,
@@ -332,8 +331,33 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 			SDL_GL_setUniform_f4( shader_data->color, 1,1,1,1 );
 	}
 
+	shader->bindShader(shader);
 	if( shader_data->color_mode ) {
 		SDL_GL_setUniform_i( shader_data->color_mode, texture->format);
+	}
+
+    if (texture->blendMode != data->current.blendMode) {
+		switch (texture->blendMode) {
+			case SDL_BLENDMODE_NONE:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				data->glDisable(GL_BLEND);
+				break;
+			case SDL_BLENDMODE_BLEND:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				data->glEnable(GL_BLEND);
+				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+				break;
+			case SDL_BLENDMODE_ADD:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				data->glEnable(GL_BLEND);
+				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+				break;
+			case SDL_BLENDMODE_MOD:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				data->glEnable(GL_BLEND);
+				data->glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
+				break;
+		}
 	}
 
 /*  data->glBegin(GL_TRIANGLE_STRIP);
@@ -382,6 +406,31 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 	shader->unbindShader(shader);
+
+
+    if (texture->blendMode != data->current.blendMode) {
+		switch (data->current.blendMode) {
+			case SDL_BLENDMODE_NONE:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				data->glDisable(GL_BLEND);
+				break;
+			case SDL_BLENDMODE_BLEND:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				data->glEnable(GL_BLEND);
+				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+				break;
+			case SDL_BLENDMODE_ADD:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				data->glEnable(GL_BLEND);
+				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
+				break;
+			case SDL_BLENDMODE_MOD:
+				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				data->glEnable(GL_BLEND);
+				data->glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
+				break;
+		}
+	}
 	return 0;
 }
 

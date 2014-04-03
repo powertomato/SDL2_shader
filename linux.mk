@@ -10,6 +10,7 @@ CFLAGS=-g3 --pedantic -Wall -std=c99 $(DEFINES)
 LDFLAGS=-lSDL2 -lSDL2_image \
 	-ldl -lGL
 EXE_EXT=
+RUN=
 
 include common.mk
 
