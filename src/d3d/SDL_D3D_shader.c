@@ -18,6 +18,10 @@ typedef struct {
 
 	LPD3DXCONSTANTTABLE pixl_symtable;
 	LPD3DXCONSTANTTABLE vert_symtable;
+
+	SDL_Uniform* color;
+	SDL_Uniform* vport;
+	SDL_Uniform* color_mode;
 } SDL_D3D_ShaderData;
 
 typedef struct {
@@ -29,8 +33,6 @@ static int vs_version_major = 1;
 static int vs_version_minor = 1;
 static int ps_version_major = 2;
 static int ps_version_minor = 0;
-
-static SDL_Uniform* color;
 
 void SDL_D3D_hint(sdl_shader_hint flag, void* value) {
 	int tmp;
@@ -132,38 +134,36 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 
 	free(file_name);
 
-	SDL_Uniform* worldMatrix;
-	worldMatrix = SDL_createUniform(shader, "world_view_projection");
-	if( worldMatrix ){
+	shader_data->vport = SDL_createUniform(shader, "world_view_projection");
+	if( shader_data->vport ){
 	    D3DXMATRIX matrix;
 		matrix.m[0][0] = 2.0f / renderer->viewport.w;
 		matrix.m[1][0] = 0.0f;
 		matrix.m[2][0] = 0.0f;
 		matrix.m[3][0] = 0.0f;
-                      
+
 		matrix.m[0][1] = 0.0f;
 		matrix.m[1][1] =-2.0f / renderer->viewport.h;
 		matrix.m[2][1] = 0.0f;
 		matrix.m[3][1] = 0.0f;
-                      
+
 		matrix.m[0][2] = 0.0f;
 		matrix.m[1][2] = 0.0f;
 		matrix.m[2][2] = 0.0f;
 		matrix.m[3][2] = 0.0f;
-                      
+
 		matrix.m[0][3] =-1.0f;
 		matrix.m[1][3] = 1.0f;
 		matrix.m[2][3] = 0.0f;
 		matrix.m[3][3] = 1.0f;
 
-		SDL_D3D_setUniform_matrix( worldMatrix, &matrix );
-		SDL_destroyUniform( shader, worldMatrix );
-	 }
+		SDL_D3D_setUniform_matrix( shader_data->vport, &matrix );
+	}
+	shader_data->color = SDL_createUniform(shader,"color");
+	shader_data->color_mode = SDL_createUniform(shader,"color_mode");
 	return shader;
 }
 
-
-extern D3DXMATRIX getViewProjectionMatrix( );
 int SDL_D3D_bindShader( SDL_Shader* shader ) {
 	SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
 	D3D_RenderData *render_data = (D3D_RenderData*) shader->renderer->driverdata;

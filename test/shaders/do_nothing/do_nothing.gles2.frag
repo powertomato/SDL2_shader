@@ -13,8 +13,9 @@ varying vec2 texCoord_out;
 
 vec4 convertColor(int type, vec4 color);
 uniform int color_mode;
-uniform sampler2D colorMap;
 uniform vec4 color;
+
+uniform sampler2D colorMap;
 
 void main(void){
 	vec4 texcol = texture2D(colorMap, texCoord_out.st); 
