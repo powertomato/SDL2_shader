@@ -320,6 +320,7 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 	SDL_GL_MakeCurrent(shader->renderer->window, data->context);
 	SDL_GL_BindTexture(texture, &width, &height );
 
+	shader->bindShader(shader);
 	if (texture->modMode ) {
 		if( shader_data->color ) SDL_GL_setUniform_f4( shader_data->color,
 				(GLfloat) texture->r * inv255f,
@@ -331,7 +332,6 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 			SDL_GL_setUniform_f4( shader_data->color, 1,1,1,1 );
 	}
 
-	shader->bindShader(shader);
 	if( shader_data->color_mode ) {
 		SDL_GL_setUniform_i( shader_data->color_mode, texture->format);
 	}
@@ -407,7 +407,9 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 
 	shader->unbindShader(shader);
 
-
+	//FIXME hack, changes SDLs internal shader to retrieve a known state
+	SDL_RenderDrawPoint(shader->renderer, -1,-1 );
+	//hack end
     if (texture->blendMode != data->current.blendMode) {
 		switch (data->current.blendMode) {
 			case SDL_BLENDMODE_NONE:

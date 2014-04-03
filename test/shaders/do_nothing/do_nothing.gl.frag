@@ -9,8 +9,10 @@
 vec4 convertColor(int type, vec4 color);
 uniform int color_mode;
 uniform sampler2D colorMap;
+uniform vec4 color;
 
 void main(void){
-	vec4 color = texture2D(colorMap, gl_TexCoord[0].st); 
-	gl_FragColor = convertColor(color_mode,color);
+	vec4 texcol = texture2D(colorMap, gl_TexCoord[0].st); 
+	texcol = convertColor(color_mode,texcol);
+	gl_FragColor = texcol * color;
 }

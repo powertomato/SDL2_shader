@@ -311,6 +311,7 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 
     data->glBindTexture(texturedata->texture_type, texturedata->texture);
 
+	shader->bindShader(shader);
 	if (texture->modMode ) {
 		if( shader_data->color ) SDL_GLES2_setUniform_f4( shader_data->color,
 				(GLfloat) texture->r * inv255f,
@@ -321,7 +322,6 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 		if( shader_data->color ) SDL_GLES2_setUniform_f4( shader_data->color, 1,1,1,1 );
 	}
 
-	shader->bindShader(shader);
 	if( shader_data->color_mode ) {
 		SDL_GLES2_setUniform_i( shader_data->color_mode, texture->format);
 	}

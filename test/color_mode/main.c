@@ -189,6 +189,22 @@ int main(int argc, char** argv)
 	};
 	int current_blend = 0;
 
+	int colors[][4] = {
+		{255,255,255,255},
+		{255,  0,  0,255},
+		{  0,255,  0,255},
+		{  0,  0,255,255},
+		{255,255,255,127}
+	};
+	char* colorNames[] = {
+		"white",
+		"red",
+		"green",
+		"blue",
+		"semi transp."
+	};
+	int current_color = 0;
+
 	SDL_Texture* textures[ sizeof(formats)/sizeof(Uint32) ];
 	
 	for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
@@ -221,7 +237,8 @@ int main(int argc, char** argv)
 	int ret = 0;
 	int quit = 0;
 	while( !quit ) {
-		SDLTest_DrawString( renderer, 8, 8, blendNames[current_blend] );
+		SDLTest_DrawString( renderer,   8,   8, blendNames[current_blend] );
+		SDLTest_DrawString( renderer, 108,   8, colorNames[current_color] );
 		for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
 			int x=30+(i%8)*55;
 			int y=30+(i/8)*75;
@@ -241,9 +258,23 @@ int main(int argc, char** argv)
 					quit = 1; 
 					break;
 				case SDL_KEYDOWN: 
-					current_blend = (current_blend+1)%4;
-					for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
-						SDL_SetTextureBlendMode(textures[i], blendModes[current_blend]);
+					switch( e.key.keysym.sym ) {
+						case SDLK_SPACE:
+							current_blend = (current_blend+1)%4;
+							for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
+								SDL_SetTextureBlendMode(textures[i], blendModes[current_blend]);
+							}
+							break;
+						case SDLK_TAB:
+							current_color = (current_color+1)%5;
+							for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
+								SDL_SetTextureColorMod(textures[i], 
+									colors[current_color][0],
+									colors[current_color][1],
+									colors[current_color][2]);
+								SDL_SetTextureAlphaMod(textures[i], colors[current_color][3] );
+							}
+							break;
 					}
 					break;
 				}
