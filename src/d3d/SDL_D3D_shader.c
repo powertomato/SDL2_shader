@@ -1,3 +1,24 @@
+/*
+  SDL2 shader
+  Copyright (C) 2014 Stefan Krulj (powertomato) <powertomato (-at-) gmail.com>
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/
+
 #ifdef SDL_SHADER_D3D
 
 #include <stdio.h>
@@ -9,7 +30,9 @@
 
 #include "../SDL_shader.h"
 #include "SDL_D3D_shader.h"
+
 #include "SDL_D3D_RenderStructs.h"
+#include "SDL_D3D_SDL_internals.c"
 
 #define SAVE_RELEASE(X) if( X != NULL ){ ID3DXBuffer_Release( X ); X=NULL; }
 typedef struct {
@@ -58,8 +81,40 @@ void SDL_D3D_hint(sdl_shader_hint flag, void* value) {
 
 }
 
-extern char* textFileRead(const char* path);
 static int SDL_D3D_setUniform_matrix( SDL_Uniform* uniform, D3DXMATRIX* matix );
+static void SDL_D3D_updateViewport( SDL_Shader* shader ) {
+	SDL_Renderer* renderer = shader->renderer;
+	SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
+	if( renderer->viewport.w && 
+		renderer->viewport.h && 
+		shader_data->vport )
+	{
+	    D3DXMATRIX matrix;
+		matrix.m[0][0] = 2.0f / renderer->viewport.w;
+		matrix.m[1][0] = 0.0f;
+		matrix.m[2][0] = 0.0f;
+		matrix.m[3][0] = 0.0f;
+
+		matrix.m[0][1] = 0.0f;
+		matrix.m[1][1] =-2.0f / renderer->viewport.h;
+		matrix.m[2][1] = 0.0f;
+		matrix.m[3][1] = 0.0f;
+
+		matrix.m[0][2] = 0.0f;
+		matrix.m[1][2] = 0.0f;
+		matrix.m[2][2] = 0.0f;
+		matrix.m[3][2] = 0.0f;
+
+		matrix.m[0][3] =-1.0f;
+		matrix.m[1][3] = 1.0f;
+		matrix.m[2][3] = 0.0f;
+		matrix.m[3][3] = 1.0f;
+
+		SDL_D3D_setUniform_matrix( shader_data->vport, &matrix );
+	}
+}
+
+extern char* textFileRead(const char* path);
 SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 
 	SDL_Shader *shader;
@@ -135,30 +190,9 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	free(file_name);
 
 	shader_data->vport = SDL_createUniform(shader, "world_view_projection");
-	if( shader_data->vport ){
-	    D3DXMATRIX matrix;
-		matrix.m[0][0] = 2.0f / renderer->viewport.w;
-		matrix.m[1][0] = 0.0f;
-		matrix.m[2][0] = 0.0f;
-		matrix.m[3][0] = 0.0f;
 
-		matrix.m[0][1] = 0.0f;
-		matrix.m[1][1] =-2.0f / renderer->viewport.h;
-		matrix.m[2][1] = 0.0f;
-		matrix.m[3][1] = 0.0f;
+	SDL_D3D_updateViewport(shader);
 
-		matrix.m[0][2] = 0.0f;
-		matrix.m[1][2] = 0.0f;
-		matrix.m[2][2] = 0.0f;
-		matrix.m[3][2] = 0.0f;
-
-		matrix.m[0][3] =-1.0f;
-		matrix.m[1][3] = 1.0f;
-		matrix.m[2][3] = 0.0f;
-		matrix.m[3][3] = 1.0f;
-
-		SDL_D3D_setUniform_matrix( shader_data->vport, &matrix );
-	}
 	shader_data->color = SDL_createUniform(shader,"color");
 	shader_data->color_mode = SDL_createUniform(shader,"color_mode");
 	return shader;
@@ -205,134 +239,15 @@ int SDL_D3D_destroyShader( SDL_Shader* shader ) {
 	return 0;
 }
 
-static D3DFORMAT PixelFormatToD3DFMT(Uint32 format) {
-	switch (format) {
-		case SDL_PIXELFORMAT_RGB565:
-			return D3DFMT_R5G6B5;
-		case SDL_PIXELFORMAT_RGB888:
-			return D3DFMT_X8R8G8B8;
-		case SDL_PIXELFORMAT_ARGB8888:
-			return D3DFMT_A8R8G8B8;
-		case SDL_PIXELFORMAT_YV12:
-		case SDL_PIXELFORMAT_IYUV:
-			return D3DFMT_L8;
-		default:
-			return D3DFMT_UNKNOWN;
-	}
-}
-
-static int D3D_ActivateRenderer(SDL_Renderer * renderer)
-{
-	D3D_RenderData *data = (D3D_RenderData *) renderer->driverdata;
-	HRESULT result;
-
-	if (data->updateSize) {
-		SDL_Window *window = renderer->window;
-		int w, h;
-
-		SDL_GetWindowSize(window, &w, &h);
-		data->pparams.BackBufferWidth = w;
-		data->pparams.BackBufferHeight = h;
-		if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
-			data->pparams.BackBufferFormat =
-				PixelFormatToD3DFMT(SDL_GetWindowPixelFormat(window));
-		} else {
-			data->pparams.BackBufferFormat = D3DFMT_UNKNOWN;
-		}
-		/* XXX if (D3D_Reset(renderer) < 0) {
-		   return -1;
-		   }*/
-
-		data->updateSize = SDL_FALSE;
-	}
-	if (data->beginScene) {
-		result = IDirect3DDevice9_BeginScene(data->device);
-		if (result == D3DERR_DEVICELOST) {
-			/* XXX if (D3D_Reset(renderer) < 0) {
-			   return -1./include/GL/glext.h;
-			   }*/
-			result = IDirect3DDevice9_BeginScene(data->device);
-		}
-		if (FAILED(result)) {
-			return SDL_SetError("SDL_Shader: D3D BeginScene() failed, errno %d\n", result);
-		}
-		data->beginScene = SDL_FALSE;
-	}
-	return 0;
-}
-
-
-static void D3D_UpdateTextureScaleMode(D3D_RenderData *data, D3D_TextureData *texturedata, unsigned index)
-{
-	if (texturedata->scaleMode != data->scaleMode[index]) {
-		IDirect3DDevice9_SetSamplerState(data->device, index, D3DSAMP_MINFILTER,
-				texturedata->scaleMode);
-		IDirect3DDevice9_SetSamplerState(data->device, index, D3DSAMP_MAGFILTER,
-				texturedata->scaleMode);
-		data->scaleMode[index] = texturedata->scaleMode;
-	}
-}
-
-	static void
-D3D_SetBlendMode(D3D_RenderData * data, int blendMode)
-{
-	switch (blendMode) {
-		case SDL_BLENDMODE_NONE:
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_ALPHABLENDENABLE,
-					FALSE);
-			break;
-		case SDL_BLENDMODE_BLEND:
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_ALPHABLENDENABLE,
-					TRUE);
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_SRCBLEND,
-					D3DBLEND_SRCALPHA);
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_DESTBLEND,
-					D3DBLEND_INVSRCALPHA);
-			if (data->enableSeparateAlphaBlend) {
-				IDirect3DDevice9_SetRenderState(data->device, D3DRS_SRCBLENDALPHA,
-						D3DBLEND_ONE);
-				IDirect3DDevice9_SetRenderState(data->device, D3DRS_DESTBLENDALPHA,
-						D3DBLEND_INVSRCALPHA);
-			}
-			break;
-		case SDL_BLENDMODE_ADD:
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_ALPHABLENDENABLE,
-					TRUE);
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_SRCBLEND,
-					D3DBLEND_SRCALPHA);
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_DESTBLEND,
-					D3DBLEND_ONE);
-			if (data->enableSeparateAlphaBlend) {
-				IDirect3DDevice9_SetRenderState(data->device, D3DRS_SRCBLENDALPHA,
-						D3DBLEND_ZERO);
-				IDirect3DDevice9_SetRenderState(data->device, D3DRS_DESTBLENDALPHA,
-						D3DBLEND_ONE);
-			}
-			break;
-		case SDL_BLENDMODE_MOD:
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_ALPHABLENDENABLE,
-					TRUE);
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_SRCBLEND,
-					D3DBLEND_ZERO);
-			IDirect3DDevice9_SetRenderState(data->device, D3DRS_DESTBLEND,
-					D3DBLEND_SRCCOLOR);
-			if (data->enableSeparateAlphaBlend) {
-				IDirect3DDevice9_SetRenderState(data->device, D3DRS_SRCBLENDALPHA,
-						D3DBLEND_ZERO);
-				IDirect3DDevice9_SetRenderState(data->device, D3DRS_DESTBLENDALPHA,
-						D3DBLEND_ONE);
-			}
-			break;
-	}
-}
-
 int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture_sdl,
-		const SDL_Rect * srcrect, const SDL_FRect * dstrect) {
+		const SDL_Rect * srcrect, const SDL_Rect * dstrect_i) {
 
 	SDL_Renderer* renderer = shader->renderer;
 	D3D_RenderData *data = (D3D_RenderData *) renderer->driverdata;
 	D3D_TextureData *texturedata;
 	//SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
+	SDL_FRect dstrect = {dstrect_i->x, dstrect_i->y, dstrect_i->w, dstrect_i->h };
+
 
 	float minx, miny, maxx, maxy;
 	float minu, maxu, minv, maxv;
@@ -350,10 +265,10 @@ int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture_sdl,
 		return -1;
 	}
 
-	minx = dstrect->x - 0.5f;
-	miny = dstrect->y - 0.5f;
-	maxx = dstrect->x + dstrect->w - 0.5f;
-	maxy = dstrect->y + dstrect->h - 0.5f;
+	minx = dstrect.x - 0.5f;
+	miny = dstrect.y - 0.5f;
+	maxx = dstrect.x + dstrect.w - 0.5f;
+	maxy = dstrect.y + dstrect.h - 0.5f;
 
 	minu = (float) srcrect->x / texture_sdl->w;
 	maxu = (float) (srcrect->x + srcrect->w) / texture_sdl->w;

@@ -1,4 +1,13 @@
 /*
+  SDL2 shader
+  Copyright (C) 2014 Stefan Krulj (powertomato) <powertomato (-at-) gmail.com>
+
+  Thes code is internally defined by SDL2 and copied from the SDL2-2.0.3
+  source release. Minor changes or additions (if any) are provided by the
+  license below.
+*/
+
+/*
   Simple DirectMedia Layer
   Copyright (C) 1997-2014 Sam Lantinga <slouken@libsdl.org>
 
@@ -18,6 +27,7 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
 //#include "SDL_config.h"
 
 #include <SDL2/SDL_test.h>

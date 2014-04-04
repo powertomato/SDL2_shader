@@ -1,3 +1,24 @@
+/*
+  SDL2 shader
+  Copyright (C) 2014 Stefan Krulj (powertomato) <powertomato (-at-) gmail.com>
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/
+
 #ifdef SDL_SHADER_OPENGL
 
 #include <stdio.h>
@@ -13,7 +34,6 @@
 #include "../SDL_shader.h"
 #include "SDL_GL_shader.h"
 #include "SDL_GL_RenderStructs.h"
-#include "SDL_glfunc_ptr.h"
 
 typedef struct {
 	GLuint v;
@@ -105,13 +125,13 @@ void SDL_GL_hint(sdl_shader_hint flag, void* value) {
 	}
 }
 
-int SDL_GL_CompileSuccessful(int obj) {
+static int SDL_GL_CompileSuccessful(int obj) {
   int status;
   glGetShaderiv(obj, GL_COMPILE_STATUS, &status);
   return status == GL_TRUE;
 }
 
-int SDL_GL_LinkSuccessful(int obj) {
+static int SDL_GL_LinkSuccessful(int obj) {
   int status;
   glGetProgramiv(obj, GL_LINK_STATUS, &status);
   return status == GL_TRUE;
@@ -305,12 +325,14 @@ int SDL_GL_destroyShader( SDL_Shader* shader ) {
 
 
 int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_FRect * dstrect) {
+               const SDL_Rect * srcrect, const SDL_Rect * dstrect_i) {
 
 	float width, height;
 	GL_RenderData *data = (GL_RenderData *) shader->renderer->driverdata;
     GL_TextureData *texturedata = (GL_TextureData *) texture->driverdata;
 	SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData *) shader->driver_data;
+	SDL_FRect dstrect = {dstrect_i->x, dstrect_i->y, dstrect_i->w, dstrect_i->h };
+
     GLfloat minu, maxu, minv, maxv;
 
     if (texturedata->yuv) {
@@ -360,28 +382,17 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 		}
 	}
 
-/*  data->glBegin(GL_TRIANGLE_STRIP);
-	data->glTexCoord2f(minu, minv);
-    data->glVertex2f(dstrect->x, dstrect->y );
-    data->glTexCoord2f(maxu, minv);
-    data->glVertex2f(dstrect->x + dstrect->w, dstrect->y );
-    data->glTexCoord2f(minu, maxv);
-    data->glVertex2f(dstrect->x, dstrect->y + dstrect->h);
-    data->glTexCoord2f(maxu, maxv);
-    data->glVertex2f(dstrect->x + dstrect->w, dstrect->y + dstrect->h);
-    data->glEnd(); */
-
     GLfloat vertices[8];
     GLfloat texCoords[8];
 
-    vertices[0] = dstrect->x;
-    vertices[1] = dstrect->y;
-    vertices[2] = (dstrect->x + dstrect->w);
-    vertices[3] = dstrect->y;
-    vertices[4] = dstrect->x;
-    vertices[5] = (dstrect->y + dstrect->h);
-    vertices[6] = vertices[2]; //(dstrect->x + dstrect->w);
-    vertices[7] = vertices[5]; //(dstrect->y + dstrect->h);
+    vertices[0] = dstrect.x;
+    vertices[1] = dstrect.y;
+    vertices[2] = (dstrect.x + dstrect.w);
+    vertices[3] = dstrect.y;
+    vertices[4] = dstrect.x;
+    vertices[5] = (dstrect.y + dstrect.h);
+    vertices[6] = vertices[2];
+    vertices[7] = vertices[5];
     glVertexAttribPointer(GL_ATTRIBUTE_POSITION, 2, GL_FLOAT, GL_FALSE, 0, vertices);
 
     minu = (GLfloat) srcrect->x / texture->w;

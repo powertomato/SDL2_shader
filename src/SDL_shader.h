@@ -1,3 +1,23 @@
+/*
+  SDL2 shader
+  Copyright (C) 2014 Stefan Krulj (powertomato) <powertomato (-at-) gmail.com>
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/
 
 #ifndef _SDL_shader_h
 #define _SDL_shader_h
@@ -6,8 +26,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "SDL_SYS_RenderStructs.h" //FIXME renderCopyShd needs SDL_FRect def
 
 typedef enum {
 	SDL_GLSL_VERSION,
@@ -51,7 +69,7 @@ struct SDL_Shader_t {
 	int (*unbindShader)( SDL_Shader* shader );
 	int (*destroyShader)( SDL_Shader* shader );
 	int (*renderCopyShd)( SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_FRect * dstrect);
+               const SDL_Rect * srcrect, const SDL_Rect * dstrect);
 	
 	SDL_Uniform* (*createUniform)( SDL_Shader* shader, const char* name );
 	int (*destroyUniform)( SDL_Shader* shader, SDL_Uniform* uniform );

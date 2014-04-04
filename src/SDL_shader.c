@@ -1,3 +1,24 @@
+/*
+  SDL2 shader
+  Copyright (C) 2014 Stefan Krulj (powertomato) <powertomato (-at-) gmail.com>
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/
+
 #include <SDL2/SDL.h>
 #include "SDL_SYS_RenderStructs.h"
 #include "SDL_shader.h"
@@ -77,7 +98,6 @@ int SDL_renderCopyShd( SDL_Shader* shader, SDL_Texture* texture,
 	SDL_Renderer *renderer = shader->renderer;
     SDL_Rect real_srcrect = { 0, 0, 0, 0 };
     SDL_Rect real_dstrect = { 0, 0, 0, 0 };
-    SDL_FRect frect;
 
     if (renderer != texture->renderer) {
         return SDL_SetError("Texture was not created with this renderer");
@@ -111,12 +131,12 @@ int SDL_renderCopyShd( SDL_Shader* shader, SDL_Texture* texture,
         return 0;
     }
 
-    frect.x = real_dstrect.x * renderer->scale.x;
-    frect.y = real_dstrect.y * renderer->scale.y;
-    frect.w = real_dstrect.w * renderer->scale.x;
-    frect.h = real_dstrect.h * renderer->scale.y;
+    real_dstrect.x *= renderer->scale.x;
+    real_dstrect.y *= renderer->scale.y;
+    real_dstrect.w *= renderer->scale.x;
+    real_dstrect.h *= renderer->scale.y;
 
-	return shader->renderCopyShd( shader, texture, &real_srcrect, &frect );
+	return shader->renderCopyShd( shader, texture, &real_srcrect, &real_dstrect );
 }
 
 

@@ -1,3 +1,25 @@
+/*
+  SDL2 shader
+  Copyright (C) 2014 Stefan Krulj (powertomato) <powertomato (-at-) gmail.com>
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/
+
+
 #ifdef SDL_SHADER_OPENGLES2
 
 #include <stdio.h>
@@ -88,9 +110,6 @@ void SDL_GLES2_init() {
 		SDL_PIXELFORMAT_RGB888
 	);
 	is_init = 1;
-
-	printf("%s" , color_conv );
-
 }
 
 void SDL_GLES2_hint(sdl_shader_hint flag, void* value) {
@@ -114,6 +133,43 @@ int SDL_GLES2_LinkSuccessful(int obj) {
 }
 
 int SDL_GLES2_setUniform_matrix( SDL_Uniform* uniform, GLfloat* mat );
+static void SDL_GLES2_updateViewport( SDL_Shader* shader ) {
+	SDL_Renderer* renderer = shader->renderer;
+	SDL_GLES2_ShaderData *shader_data = (SDL_GLES2_ShaderData*) shader->driver_data;
+    if ( renderer->viewport.w && renderer->viewport.h) {
+		if( shader_data->vport ) {
+			GLfloat projection[4][4];
+			/* Prepare an orthographic projection */
+			projection[0][0] = 2.0f / renderer->viewport.w;
+			projection[0][1] = 0.0f;
+			projection[0][2] = 0.0f;
+			projection[0][3] = 0.0f;
+			projection[1][0] = 0.0f;
+			if (renderer->target) {
+				projection[1][1] = 2.0f / renderer->viewport.h;
+			} else {
+				projection[1][1] = -2.0f / renderer->viewport.h;
+			}
+			projection[1][2] = 0.0f;
+			projection[1][3] = 0.0f;
+			projection[2][0] = 0.0f;
+			projection[2][1] = 0.0f;
+			projection[2][2] = 0.0f;
+			projection[2][3] = 0.0f;
+			projection[3][0] = -1.0f;
+			if (renderer->target) {
+				projection[3][1] = -1.0f;
+			} else {
+				projection[3][1] = 1.0f;
+			}
+			projection[3][2] = 0.0f;
+			projection[3][3] = 1.0f;
+			SDL_GLES2_setUniform_matrix( shader_data->vport, (GLfloat*) projection );
+		}
+    }
+}
+
+
 SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	//TODO error handling, on error return NULL and SDL_SetError(fmt,...)
 	// Does geometry shaders and tessalation make any sense?
@@ -229,38 +285,9 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	glDeleteShader( shader_data->v );
 	glDeleteShader( shader_data->f );
 
-    if ( renderer->viewport.w && renderer->viewport.h) {
-		shader_data->vport = SDL_createUniform(shader,"world_view_projection");
-		if( shader_data->vport ) {
-			GLfloat projection[4][4];
-			/* Prepare an orthographic projection */
-			projection[0][0] = 2.0f / renderer->viewport.w;
-			projection[0][1] = 0.0f;
-			projection[0][2] = 0.0f;
-			projection[0][3] = 0.0f;
-			projection[1][0] = 0.0f;
-			if (renderer->target) {
-				projection[1][1] = 2.0f / renderer->viewport.h;
-			} else {
-				projection[1][1] = -2.0f / renderer->viewport.h;
-			}
-			projection[1][2] = 0.0f;
-			projection[1][3] = 0.0f;
-			projection[2][0] = 0.0f;
-			projection[2][1] = 0.0f;
-			projection[2][2] = 0.0f;
-			projection[2][3] = 0.0f;
-			projection[3][0] = -1.0f;
-			if (renderer->target) {
-				projection[3][1] = -1.0f;
-			} else {
-				projection[3][1] = 1.0f;
-			}
-			projection[3][2] = 0.0f;
-			projection[3][3] = 1.0f;
-			SDL_GLES2_setUniform_matrix( shader_data->vport, (GLfloat*) projection );
-		}
-    }
+	shader_data->vport = SDL_createUniform(shader,"world_view_projection");
+	SDL_GLES2_updateViewport( shader );
+
 	shader_data->color = SDL_createUniform(shader,"color");
 	shader_data->color_mode = SDL_createUniform(shader,"color_mode");
 	glEnableVertexAttribArray(GLES2_ATTRIBUTE_POSITION);
@@ -299,13 +326,13 @@ int SDL_GLES2_destroyShader( SDL_Shader* shader ) {
 
 
 int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_FRect * dstrect) {
-
+               const SDL_Rect * srcrect, const SDL_Rect * dstrect_i) {
     GLfloat vertices[8];
     GLfloat texCoords[8];
 	GLES2_DriverContext *data = (GLES2_DriverContext *) shader->renderer->driverdata;
 	SDL_GLES2_ShaderData *shader_data = (SDL_GLES2_ShaderData*) shader->driver_data;
     GLES2_TextureData *texturedata = (GLES2_TextureData *) texture->driverdata;
+	SDL_FRect dstrect = {dstrect_i->x, dstrect_i->y, dstrect_i->w, dstrect_i->h };
 
 	SDL_GL_MakeCurrent(shader->renderer->window, data->context);
 
@@ -350,15 +377,14 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 		}
 	}
 
-
-    vertices[0] = dstrect->x;
-    vertices[1] = (dstrect->y + dstrect->h);
-    vertices[2] = (dstrect->x + dstrect->w);
-    vertices[3] = (dstrect->y + dstrect->h);
-    vertices[4] = dstrect->x;
-    vertices[5] = dstrect->y;
-    vertices[6] = (dstrect->x + dstrect->w);
-    vertices[7] = dstrect->y;
+    vertices[0] = dstrect.x;
+    vertices[1] = (dstrect.y + dstrect.h);
+    vertices[2] = (dstrect.x + dstrect.w);
+    vertices[3] = (dstrect.y + dstrect.h);
+    vertices[4] = dstrect.x;
+    vertices[5] = dstrect.y;
+    vertices[6] = (dstrect.x + dstrect.w);
+    vertices[7] = dstrect.y;
     data->glVertexAttribPointer(GLES2_ATTRIBUTE_POSITION, 2, GL_FLOAT, GL_FALSE, 0, vertices);
 
     texCoords[0] = srcrect->x / (GLfloat)texture->w;

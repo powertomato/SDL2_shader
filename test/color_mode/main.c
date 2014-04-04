@@ -5,6 +5,7 @@
 #include <SDL2/SDL_test_font.h>
 #include <SDL2/SDL_image.h>
 #include "../src/SDL_shader.h"
+#include "../src/SDL_SYS_RenderStructs.h"
 
 
 
