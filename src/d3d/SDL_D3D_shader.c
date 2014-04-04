@@ -107,7 +107,7 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	SAVE_RELEASE( error );
 	if (FAILED(result)) {
 		shader->destroyShader(shader);
-		SDL_SetError("SDL_Shader: D3D CreatePixelShader() failed, errno %d\n", result);
+		SDL_SetError("SDL_Shader: D3D CreateVertexShader() failed, errno %d\n", result);
 		return NULL;
 	}
 
@@ -115,7 +115,7 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	shader_version[3] = '0'+ps_version_major;
 	shader_version[5] = '0'+ps_version_minor;
 	result = D3DXCompileShaderFromFile(file_name, NULL, NULL, "PixelShaderMain",
-		shader_version, 0, &code, NULL, &(shader_data->pixl_symtable));
+		shader_version, 0, &code, &error, &(shader_data->pixl_symtable));
 	if( FAILED(result)){
 		SDL_SetError("SDL_Shader: D3D CompilelShader() failed: \n--\n%s--\n", ID3DXBuffer_GetBufferPointer( error ));
 		SAVE_RELEASE( code );

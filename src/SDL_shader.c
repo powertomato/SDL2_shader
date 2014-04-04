@@ -4,6 +4,7 @@
 #include "opengles2/SDL_GLES2_shader.h"
 #include "opengl/SDL_GL_shader.h"
 #include "d3d/SDL_D3D_shader.h"
+#include "d3d11/SDL_D3D11_shader.h"
 
 
 #include <stdio.h>
@@ -19,9 +20,7 @@ SDL_Shader* SDL_createShader( SDL_Renderer *renderer, const char* name ) {
 	}
 #endif
 	
-#ifdef SDL_SHADER_OPENGLES
-#error "Not supported yet :("
-#endif
+/* opengles1.x didn't support shaders */
 
 #ifdef SDL_SHADER_OPENGLES2
 	if( strcmp( renderer->info.name, "opengles2" )==0 ) {
@@ -36,7 +35,9 @@ SDL_Shader* SDL_createShader( SDL_Renderer *renderer, const char* name ) {
 #endif
 
 #ifdef SDL_SHADER_D3D11
-#error "Not supported yet :("
+	if( strcmp( renderer->info.name, "direct3d11" )==0 ) {
+		shader = SDL_D3D11_createShader( renderer, name );
+	}
 #endif
 
 	return shader;
@@ -48,14 +49,15 @@ void SDL_hint( sdl_shader_hint flag, void* value ){
 #ifdef SDL_SHADER_OPENGL
 	SDL_GL_hint( flag, value );
 #endif
-#ifdef SDL_SHADER_OPENGLES
-	SDL_GLES_hint( flag, value );
-#endif
+
 #ifdef SDL_SHADER_OPENGLES2
 	SDL_GLES2_hint( flag, value );
 #endif
 #ifdef SDL_SHADER_D3D
 	SDL_D3D_hint( flag, value );
+#endif
+#ifdef SDL_SHADER_D3D11
+	SDL_D3D11_hint( flag, value );
 #endif
 }
 

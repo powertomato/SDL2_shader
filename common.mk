@@ -1,20 +1,27 @@
 .PHONY: all clean test runtest clean_test flags builddirs
 
+# paths
 SRCPATH=src
 TESTPATH=test
 TESTBIN=test/bin
 OBJPATH=obj
 BINPATH=bin
 
+# objects to be included in the library
 OBJ=SDL_shader.o \
 opengl/SDL_GL_shader.o \
 d3d/SDL_D3D_shader.o \
-opengles2/SDL_GLES2_shader.o \
+d3d11/SDL_D3D11_shader.o \
+opengles2/SDL_GLES2_shader.o
+
 
 DIRS=opengl/ \
 d3d \
+d3d11 \
 opengles2 \
+test
 
+# objects needed for the test cases
 TEST_OBJ=test/SDL_test_font.o
 TEST_BIN=$(TEST_CASES:%=$(TESTBIN)/test_%$(EXE_EXT))
 
@@ -63,7 +70,7 @@ $(OBJPATH)/%.o : $(SRCPATH)/%.c
 	@$(GCC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 	
 $(TESTBIN)/test_%$(EXE_EXT) : $(TESTPATH)/%/main.c
-	@echo "$(GCC) (CFLAGS) (OBJECTS) $< -o $@$(EXE_EXT)"
+	@echo "$(GCC) (CFLAGS) (OBJECTS) $< -o $@"
 	@$(GCC) $(CFLAGS) $(INCLUDE) -I$(SRCPATH) $(OBJECTS) $(TEST_OBJECTS) $< $(LDFLAGS) -o $@
 clean_test:
 	$(RM) $(TEST_BIN)
