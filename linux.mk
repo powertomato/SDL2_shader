@@ -2,7 +2,7 @@ DEFINES+=-DSDL_SHADER_OPENGL \
 -DSDL_SHADER_OPENGLES2 \
 -DGL_GLEXT_PROTOTYPES
 
-TEST_CASES=color_mode
+TEST_CASES=color_mode all_the_shaders
 GCC=gcc
 GPP=g++
 AR=ar

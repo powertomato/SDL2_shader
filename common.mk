@@ -11,8 +11,8 @@ BINPATH=bin
 OBJ=SDL_shader.o \
 opengl/SDL_GL_shader.o \
 d3d/SDL_D3D_shader.o \
-d3d11/SDL_D3D11_shader.o \
 opengles2/SDL_GLES2_shader.o
+#d3d11/SDL_D3D11_shader.o \
 
 
 DIRS=opengl/ \

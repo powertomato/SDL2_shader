@@ -3,7 +3,7 @@ DEFINES+=-DSDL_SHADER_D3D \
 #-DSDL_SHADER_OPENGL \
 #-DGL_GLEXT_PROTOTYPES
 
-TEST_CASES=color_mode
+TEST_CASES=color_mode all_the_shaders
 GCC=x86_64-w64-mingw32-gcc
 GPP=x86_64-w64-mingw32-g++
 AR=x86_64-w64-mingw32-ar

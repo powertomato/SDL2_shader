@@ -253,8 +253,10 @@ int main(int argc, char** argv)
 			dst.y += (sizeof(formats)/sizeof(Uint32))/8 * 75 + 85;
 			SDL_RenderCopy( renderer, textures[i], NULL, &dst );
 			SDLTest_DrawString( renderer, dst.x,dst.y+55 + (i%2==0 ? 10 : 0), fmt_names[i] );
-			while (SDL_PollEvent(&e)){
-				switch( e.type ) {
+
+		}
+		while (SDL_PollEvent(&e)){
+			switch( e.type ) {
 				case SDL_QUIT: 
 					quit = 1; 
 					break;
@@ -270,18 +272,15 @@ int main(int argc, char** argv)
 							current_color = (current_color+1)%5;
 							for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
 								SDL_SetTextureColorMod(textures[i], 
-									colors[current_color][0],
-									colors[current_color][1],
-									colors[current_color][2]);
+										colors[current_color][0],
+										colors[current_color][1],
+										colors[current_color][2]);
 								SDL_SetTextureAlphaMod(textures[i], colors[current_color][3] );
 							}
 							break;
 					}
 					break;
-				}
 			}
-
-
 		}
 
 		SDL_RenderPresent(renderer);
