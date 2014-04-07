@@ -7,14 +7,6 @@
 #include "../src/SDL_shader.h"
 #include "../src/SDL_SYS_RenderStructs.h"
 
-
-static char *shader_names[] = {
-	"do_nothing",
-	"greyscale",
-	"sepia",
-};
-static SDL_Shader** shaders;
-static int current_shader;
 #define NUM_OF_SHADERS (sizeof(shader_names)/sizeof(char*))
 
 
@@ -73,27 +65,12 @@ int main(int argc, char** argv)
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderClear(renderer);
 
-	shaders = (SDL_Shader**) malloc( sizeof(SDL_Shader*)*NUM_OF_SHADERS );
-	int i;
-	for ( i=0; i<NUM_OF_SHADERS; i++) {
-		SDL_Shader *shader;
-		char buff_name[2048] = {0};
-		strncat( buff_name, "../shaders/", 2048 );
-		strncat( buff_name, shader_names[i], 2048 );
-		strncat( buff_name, "/", 2048 );
-		strncat( buff_name, shader_names[i], 2048 );
-		printf("loading shader #%i %s\n", i, buff_name );
-		shader = SDL_createShader( renderer, buff_name );
-		if ( shader == NULL ){
-			fprintf(stderr, "Error: %s \n", SDL_GetError());
-			return 4;
-		}
-		shaders[i] = shader;
-	}
+	SDL_Shader *shader;
+	shader = SDL_createShader( renderer, "../shaders/do_nothing/do_nothing" );
 
 	SDL_Texture* tex;
 	SDL_Surface* srf;
-	srf = IMG_Load( "../all.png" );
+	srf = IMG_Load( "../img.png" );
 	if ( !srf ) {
 		fprintf(stderr, "Error: %s \n", SDL_GetError());
 		return 5;
@@ -107,9 +84,60 @@ int main(int argc, char** argv)
 	int ret = 0;
 	int quit = 0;
 	while ( !quit ) {
-		SDLTest_DrawString( renderer,   8,   8, shader_names[current_shader] );
-		SDL_Rect dst = { 50, 50, tex->w, tex->h };
-		ret = SDL_renderCopyShd( shaders[current_shader], tex, NULL, &dst );
+		SDLTest_DrawString( renderer,   8,   8, "test" );
+		SDL_Rect dst;
+		// Shd -> Copy -> Shd
+		SDL_SetTextureColorMod(tex, 255,255,255);
+		dst = (SDL_Rect) { 25, 25, tex->w, tex->h };
+		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
+
+		SDL_SetTextureColorMod(tex, 255,0,0);
+		dst = (SDL_Rect){ 100, 25, tex->w, tex->h };
+		ret = SDL_RenderCopy( renderer, tex, NULL, &dst );
+
+		SDL_SetTextureColorMod(tex, 255,255,255);
+		dst = (SDL_Rect){ 175, 25, tex->w, tex->h };
+		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
+
+		// Copy -> Shd -> Copy
+		SDL_SetTextureColorMod(tex, 255,255,255);
+		dst = (SDL_Rect){ 25, 100, tex->w, tex->h };
+		ret = SDL_RenderCopy( renderer, tex, NULL, &dst );
+
+		SDL_SetTextureColorMod(tex, 0,255,0);
+		dst = (SDL_Rect){ 100, 100, tex->w, tex->h };
+		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
+
+		SDL_SetTextureColorMod(tex, 255,255,255);
+		dst = (SDL_Rect){ 175, 100, tex->w, tex->h };
+		ret = SDL_RenderCopy( renderer, tex, NULL, &dst );
+
+		// Draw -> Shd -> Draw
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		dst = (SDL_Rect){ 25, 175, tex->w, tex->h };
+		ret = SDL_RenderFillRect( renderer, &dst );
+
+		SDL_SetTextureColorMod(tex, 255,0,255);
+		dst = (SDL_Rect){ 100, 175, tex->w, tex->h };
+		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
+
+		dst = (SDL_Rect){ 175, 175, tex->w, tex->h };
+		ret = SDL_RenderFillRect( renderer, &dst );
+
+		// Shd -> Draw -> Shd
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		dst = (SDL_Rect){ 25, 250, tex->w, tex->h };
+		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
+
+		SDL_SetTextureColorMod(tex, 255,0,255);
+		dst = (SDL_Rect){ 100, 250, tex->w, tex->h };
+		ret = SDL_RenderFillRect( renderer, &dst );
+
+		dst = (SDL_Rect){ 175, 250, tex->w, tex->h };
+		ret = SDL_RenderFillRect( renderer, &dst );
+		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
+
+
 		if ( ret!=0 ){
 			fprintf(stderr,"Err: %s\n", SDL_GetError());
 		}
@@ -122,10 +150,8 @@ int main(int argc, char** argv)
 			case SDL_KEYDOWN: 
 				switch ( e.key.keysym.sym ) {
 					case SDLK_SPACE:
-						current_shader=(current_shader-1)% (NUM_OF_SHADERS);
 						break;
 					case SDLK_TAB:
-						current_shader=(current_shader+1)% (NUM_OF_SHADERS);
 						break;
 				}
 				break;
@@ -140,6 +166,5 @@ int main(int argc, char** argv)
 
 	}
 
-	free(shaders);
 	return 0;
 }
