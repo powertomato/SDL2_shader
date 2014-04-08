@@ -91,6 +91,8 @@ Lower priority
  * integrate a build system like cmake or automake
  * official builds
  * code cleanup
+ * a 2D-lightning shader like [this](https://www.youtube.com/watch?v=Xmn6zhDJGLE)
+ or [this](http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-shadows/)
 
 Nice to have
 ------------

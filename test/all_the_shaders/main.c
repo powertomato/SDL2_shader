@@ -17,6 +17,11 @@ static SDL_Shader** shaders;
 static int current_shader;
 #define NUM_OF_SHADERS (sizeof(shader_names)/sizeof(char*))
 
+int mod(int a, int b)
+{
+    int r = a % b;
+    return r < 0 ? r + b : r;
+}
 
 #ifdef _WIN32
 //prevents displaying the black console window
@@ -122,10 +127,10 @@ int main(int argc, char** argv)
 			case SDL_KEYDOWN: 
 				switch ( e.key.keysym.sym ) {
 					case SDLK_SPACE:
-						current_shader=(current_shader-1)% (NUM_OF_SHADERS);
+						current_shader= mod( (current_shader-1), (NUM_OF_SHADERS));
 						break;
 					case SDLK_TAB:
-						current_shader=(current_shader+1)% (NUM_OF_SHADERS);
+						current_shader= mod( (current_shader+1), (NUM_OF_SHADERS));
 						break;
 				}
 				break;

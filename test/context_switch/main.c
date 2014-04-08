@@ -37,9 +37,20 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+
+	SDL_version compiled;
+	SDL_version linked;
+
+	SDL_VERSION(&compiled);
+	SDL_GetVersion(&linked);
+	printf("We compiled against SDL version %d.%d.%d ...\n",
+			compiled.major, compiled.minor, compiled.patch);
+	printf("But we are linking against SDL version %d.%d.%d.\n",
+			linked.major, linked.minor, linked.patch);
+
 	SDL_SetHint( SDL_HINT_RENDER_DRIVER, getenv("RENDER_DRIVER") ); 
 
-	int width = 500;
+	int width = 250;
 	int height = 400;
 	screen = SDL_CreateWindow("Caption",
 			SDL_WINDOWPOS_CENTERED,
@@ -69,6 +80,7 @@ int main(int argc, char** argv)
 	shader = SDL_createShader( renderer, "../shaders/do_nothing/do_nothing" );
 
 	SDL_Texture* tex;
+	SDL_Texture* tex2;
 	SDL_Surface* srf;
 	srf = IMG_Load( "../img.png" );
 	if ( !srf ) {
@@ -76,6 +88,8 @@ int main(int argc, char** argv)
 		return 5;
 	}
 	tex = SDL_CreateTextureFromSurface(renderer, srf );
+	tex2 = SDL_CreateTextureFromSurface(renderer, srf );
+	SDL_SetTextureAlphaMod( tex2, 127 );
 	SDL_FreeSurface(srf);
 
 	SDL_SetRenderTarget( renderer, NULL );
@@ -84,36 +98,40 @@ int main(int argc, char** argv)
 	int ret = 0;
 	int quit = 0;
 	while ( !quit ) {
-		SDLTest_DrawString( renderer,   8,   8, "test" );
 		SDL_Rect dst;
+		SDLTest_DrawString( renderer,   25,   10, "Shd -> Copy -> Shd" );
+		SDLTest_DrawString( renderer,   25,   85, "Copy -> Shd -> Copy" );
+		SDLTest_DrawString( renderer,   25,   160, "Draw -> Shd -> Draw" );
+		SDLTest_DrawString( renderer,   25,   235, "Shd -> Draw -> Shd" );
+
 		// Shd -> Copy -> Shd
 		SDL_SetTextureColorMod(tex, 255,255,255);
 		dst = (SDL_Rect) { 25, 25, tex->w, tex->h };
 		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
 
-		SDL_SetTextureColorMod(tex, 255,0,0);
+		SDL_SetTextureColorMod(tex2, 255,0,0);
 		dst = (SDL_Rect){ 100, 25, tex->w, tex->h };
-		ret = SDL_RenderCopy( renderer, tex, NULL, &dst );
+		ret = SDL_RenderCopy( renderer, tex2, NULL, &dst );
 
 		SDL_SetTextureColorMod(tex, 255,255,255);
 		dst = (SDL_Rect){ 175, 25, tex->w, tex->h };
 		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
 
 		// Copy -> Shd -> Copy
-		SDL_SetTextureColorMod(tex, 255,255,255);
+		SDL_SetTextureColorMod(tex2, 255,255,255);
 		dst = (SDL_Rect){ 25, 100, tex->w, tex->h };
-		ret = SDL_RenderCopy( renderer, tex, NULL, &dst );
+		ret = SDL_RenderCopy( renderer, tex2, NULL, &dst );
 
 		SDL_SetTextureColorMod(tex, 0,255,0);
 		dst = (SDL_Rect){ 100, 100, tex->w, tex->h };
 		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
 
-		SDL_SetTextureColorMod(tex, 255,255,255);
+		SDL_SetTextureColorMod(tex2, 255,255,255);
 		dst = (SDL_Rect){ 175, 100, tex->w, tex->h };
-		ret = SDL_RenderCopy( renderer, tex, NULL, &dst );
+		ret = SDL_RenderCopy( renderer, tex2, NULL, &dst );
 
 		// Draw -> Shd -> Draw
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
 		dst = (SDL_Rect){ 25, 175, tex->w, tex->h };
 		ret = SDL_RenderFillRect( renderer, &dst );
 
@@ -121,20 +139,27 @@ int main(int argc, char** argv)
 		dst = (SDL_Rect){ 100, 175, tex->w, tex->h };
 		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
 
+		SDL_SetTextureColorMod(tex, 255,0,255);
+		dst = (SDL_Rect){ -1, -1, 1, 1 };
+		SDL_RenderCopy( renderer, tex2, NULL, &dst );
+		ret = SDL_RenderFillRect( renderer, &dst );
+		SDL_RenderCopy( renderer, tex2, NULL, &dst );
+
+		SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
 		dst = (SDL_Rect){ 175, 175, tex->w, tex->h };
 		ret = SDL_RenderFillRect( renderer, &dst );
 
 		// Shd -> Draw -> Shd
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_SetTextureColorMod(tex, 0,255,255);
 		dst = (SDL_Rect){ 25, 250, tex->w, tex->h };
 		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
 
-		SDL_SetTextureColorMod(tex, 255,0,255);
 		dst = (SDL_Rect){ 100, 250, tex->w, tex->h };
 		ret = SDL_RenderFillRect( renderer, &dst );
 
+		SDL_SetTextureColorMod(tex, 255,255,0);
 		dst = (SDL_Rect){ 175, 250, tex->w, tex->h };
-		ret = SDL_RenderFillRect( renderer, &dst );
 		ret = SDL_renderCopyShd( shader, tex, NULL, &dst );
 
 

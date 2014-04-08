@@ -343,6 +343,7 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 	SDL_GL_BindTexture(texture, &width, &height );
 
 	shader->bindShader(shader);
+	data->current.shader = SHADER_NONE;
 	if (texture->modMode ) {
 		if( shader_data->color ) SDL_GL_setUniform_f4( shader_data->color,
 				(GLfloat) texture->r * inv255f,
@@ -358,6 +359,7 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 		SDL_GL_setUniform_i( shader_data->color_mode, texture->format);
 	}
 
+    data->current.shader = SHADER_NONE;
     if (texture->blendMode != data->current.blendMode) {
 		switch (texture->blendMode) {
 			case SDL_BLENDMODE_NONE:
@@ -380,6 +382,7 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 				data->glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
 				break;
 		}
+		data->current.blendMode = texture->blendMode;
 	}
 
     GLfloat vertices[8];
@@ -418,32 +421,6 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 
 	shader->unbindShader(shader);
 
-	//FIXME hack, changes SDLs internal shader to retrieve a known state
-	SDL_RenderDrawPoint(shader->renderer, -1,-1 );
-	//hack end
-    if (texture->blendMode != data->current.blendMode) {
-		switch (data->current.blendMode) {
-			case SDL_BLENDMODE_NONE:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-				data->glDisable(GL_BLEND);
-				break;
-			case SDL_BLENDMODE_BLEND:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
-				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-				break;
-			case SDL_BLENDMODE_ADD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
-				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
-				break;
-			case SDL_BLENDMODE_MOD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
-				data->glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
-				break;
-		}
-	}
 	return 0;
 }
 
