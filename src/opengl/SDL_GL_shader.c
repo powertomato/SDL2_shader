@@ -36,8 +36,6 @@
 #include "SDL_GL_RenderStructs.h"
 
 typedef struct {
-	GLuint v;
-	GLuint f;
 	GLuint p;
 
 	SDL_Uniform* color;
@@ -143,13 +141,25 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	// Does geometry shaders and tessalation make any sense?
 
 	SDL_Shader *shader;
+	GLuint v;
+	GLuint f;
+
 	char *vs,*fs;
 	if( !is_init ){
 		SDL_GL_init();
 	}
 
 	shader = (SDL_Shader*) malloc( sizeof(SDL_Shader) );
+	if( !shader ){
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	shader->driver_data = malloc( sizeof(SDL_GL_ShaderData ) );
+	if ( !shader->driver_data ) {
+		free( shader->driver_data );
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
 
 	shader->renderer = renderer;
@@ -163,8 +173,8 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	shader->destroyUniform = SDL_GL_destroyUniform;
 
 	shader_data->p = 0;
-	shader_data->v = glCreateShader( GL_VERTEX_SHADER );
-	shader_data->f = glCreateShader( GL_FRAGMENT_SHADER );
+	v = glCreateShader( GL_VERTEX_SHADER );
+	f = glCreateShader( GL_FRAGMENT_SHADER );
 	shader_data->color = NULL;
 	shader_data->vport = NULL;
 	shader_data->color_mode = NULL;
@@ -173,6 +183,13 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	int ext_len =  8; //strlen(".gl.xxxx");
 
 	char *file_name = malloc(name_len + ext_len + 1 );
+	if( !file_name ){
+		shader->destroyShader( shader );
+		SDL_OutOfMemory();
+		return NULL;
+	}
+
+
 	strncpy( file_name, name, name_len );
 	file_name[ name_len + ext_len ] = '\0';
 
@@ -197,30 +214,30 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 
 	const char* vss = (const char*) vs;
 	const char *fss[] = {fs, color_conv};
-	glShaderSource(shader_data->v, 1, &vss,NULL);
-	glShaderSource(shader_data->f, 2, fss,NULL);
+	glShaderSource(v, 1, &vss,NULL);
+	glShaderSource(f, 2, fss,NULL);
 
 	free(file_name);
 	free(vs);
 	free(fs);
 
-	glCompileShader( shader_data->v );
-	if( !SDL_GL_CompileSuccessful(shader_data->v) ){
+	glCompileShader( v );
+	if( !SDL_GL_CompileSuccessful(v) ){
 
 		GLchar buff[512];
 		GLsizei len;
-		glGetShaderInfoLog(shader_data->v, 512, &len, buff);
+		glGetShaderInfoLog(v, 512, &len, buff);
 
 		SDL_SetError("SDL_Shader: OpenGL Could not compile vertex shader: \n-------\n%s\n-------\n", buff );
 		shader->destroyShader(shader);
 		return NULL;
 	}
-	glCompileShader( shader_data->f );
-	if( !SDL_GL_CompileSuccessful(shader_data->f) ){
+	glCompileShader( f );
+	if( !SDL_GL_CompileSuccessful(f) ){
 
 		GLchar buff[512];
 		GLsizei len;
-		glGetShaderInfoLog(shader_data->f, 512, &len, buff);
+		glGetShaderInfoLog(f, 512, &len, buff);
 
 		SDL_SetError("SDL_Shader: OpenGL Could not compile fragment shader: \n-------\n%s\n-------\n", buff );
 		shader->destroyShader(shader);
@@ -229,8 +246,8 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 
 	shader_data->p = glCreateProgram();
 
-	glAttachShader( shader_data->p,shader_data->v );
-	glAttachShader( shader_data->p,shader_data->f );
+	glAttachShader( shader_data->p,v );
+	glAttachShader( shader_data->p,f );
 
 	glBindAttribLocation( shader_data->p, GL_ATTRIBUTE_POSITION, "position");
 	glBindAttribLocation( shader_data->p, GL_ATTRIBUTE_TEXCOORD, "texCoords");
@@ -249,8 +266,8 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 
 	shader->bindShader(shader);
 
-	glDeleteShader( shader_data->v );
-	glDeleteShader( shader_data->f );
+	glDeleteShader( v );
+	glDeleteShader( f );
 
     if ( renderer->viewport.w && renderer->viewport.h) {
 		shader_data->vport = SDL_createUniform(shader,"world_view_projection");
@@ -293,31 +310,26 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 }
 
 int SDL_GL_bindShader( SDL_Shader* shader ) {
-	// TODO check gl, sdl return code compatibility, error handling
 	SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
-	glUseProgram( shader_data->p ); //XXX
-	return 0;
+	glUseProgram( shader_data->p );
+	return glGetError();
 }
 
 int SDL_GL_unbindShader( SDL_Shader* shader ) {
-	// TODO check gl, sdl return code compatibility, error handling
-	glUseProgram( 0 ); //XXX
-	return 0;
+	glUseProgram( 0 );
+	return glGetError();
 }
 
 int SDL_GL_destroyShader( SDL_Shader* shader ) {
 	// SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
-	// TODO GL destroy stuff
-	// 
 	if( !shader )
 		return 0;
 	SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
-	if( shader_data->f ) glDeleteShader( shader_data->f );
-	if( shader_data->v ) glDeleteShader( shader_data->v );
-	if( shader_data->p ) glDeleteShader( shader_data->p );
-	shader->unbindShader( shader );
+	shader->destroyUniform(shader, shader_data->color_mode );
 	shader->destroyUniform(shader, shader_data->color );
 	shader->destroyUniform(shader, shader_data->vport );
+	if( shader_data->p ) glDeleteShader( shader_data->p );
+	shader->unbindShader( shader );
 	free( shader->driver_data );
 	free( shader );
 	return 0;
@@ -421,7 +433,7 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 
 	shader->unbindShader(shader);
 
-	return 0;
+	return glGetError();
 }
 
 SDL_Uniform* SDL_GL_createUniform( SDL_Shader* shader, const char* name ) {
@@ -432,7 +444,16 @@ SDL_Uniform* SDL_GL_createUniform( SDL_Shader* shader, const char* name ) {
 		return NULL;
 
 	SDL_Uniform* uniform = (SDL_Uniform*) malloc( sizeof(SDL_Uniform) );
+	if( !uniform ){
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*) malloc( sizeof(SDL_GL_UniformData) );
+	if( !udata ){
+		free(uniform);
+		SDL_OutOfMemory();
+		return NULL;
+	}
 
 	uniform->shader = shader;
 
@@ -456,8 +477,6 @@ SDL_Uniform* SDL_GL_createUniform( SDL_Shader* shader, const char* name ) {
 
 }
 int SDL_GL_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform ){
-	if( !uniform )
-		return 0;
 	free(uniform->driver_data);
 	free(uniform);
 	return 0;
@@ -466,60 +485,61 @@ int SDL_GL_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform ){
 int SDL_GL_setUniform_matrix( SDL_Uniform* uniform, GLfloat* mat ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniformMatrix4fv( udata->loc, 1, GL_FALSE, mat );
-	return 0;
+	return glGetError();
 }
+	// TODO check gl, sdl return code compatibility, error handling
 
 int SDL_GL_setUniform_fv( SDL_Uniform* uniform, float* vector, int num ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1fv( udata->loc, num, vector);
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f(  SDL_Uniform* uniform, float a ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1f(udata->loc, a );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f2( SDL_Uniform* uniform, float a, float b ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform2f(udata->loc, a,b );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f3( SDL_Uniform* uniform, float a, float b, float c ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform3f(udata->loc, a,b,c );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f4( SDL_Uniform* uniform, float a, float b, float c, float d ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform4f(udata->loc, a,b,c,d );
-	return 0;
+	return glGetError();
 }
 
 
 int SDL_GL_setUniform_iv( SDL_Uniform* uniform, int* vector, int num ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1iv( udata->loc, num, vector);
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i(  SDL_Uniform* uniform, int a ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1i(udata->loc, a );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i2( SDL_Uniform* uniform, int a, int b ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform2i(udata->loc, a,b );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i3( SDL_Uniform* uniform, int a, int b, int c ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform3i(udata->loc, a,b,c );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i4( SDL_Uniform* uniform, int a, int b, int c, int d ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform4i(udata->loc, a,b,c,d );
-	return 0;
+	return glGetError();
 }
 
 #else

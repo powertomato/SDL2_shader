@@ -79,18 +79,29 @@ Dev. Roadmap
 If you want to contribute here is the list of TODOs which has to be done. A *
 denotes the feature is beeing worked on.
 
+Beta milestones
+---------------
+This is the stuff which needs to be done for a beta release.
+ * SDL_renderCopyShdArray (for rendering an array of triangles and textures)
+ * SDL_createShader interface change -> take a buffer instead of name
+ * SDL_getShaderBuffer -> create a buffer from name
+ * Doxygen-documentation
+ * Fix OpenGL-backend for windows
+ * Testcase for SDL_renderCopyShdArray
+ * Testcase for SDL_uniform* functions
+ * integrate a testing framework
+ * testcase automation
+ * Makefiles for MacOS, iOS and android
+ * An other pass of code cleanup
+
 High priority
 -------------
  * direct3d11 backend*
- * more testcases*
- * integrate an automatic testing framework
- * Decide on a definite interface
 
 Lower priority
 ------------
  * integrate a build system like cmake or automake
  * official builds
- * code cleanup
  * a 2D-lightning shader like [this](https://www.youtube.com/watch?v=Xmn6zhDJGLE)
  or [this](http://www.catalinzima.com/2010/07/my-technique-for-the-shader-based-dynamic-2d-shadows/)
 

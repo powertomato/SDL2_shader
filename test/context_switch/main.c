@@ -191,5 +191,11 @@ int main(int argc, char** argv)
 
 	}
 
+	SDL_DestroyTexture( tex );
+	SDL_DestroyTexture( tex2 );
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( screen );
+	SDL_Quit();
+
 	return 0;
 }

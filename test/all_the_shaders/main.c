@@ -144,7 +144,13 @@ int main(int argc, char** argv)
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	}
-
+	for( i=0; i<NUM_OF_SHADERS; i++ ){
+		SDL_destroyShader( shaders[i] );
+	}
+	SDL_DestroyTexture( tex );
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( screen );
+	SDL_Quit();
 	free(shaders);
 	return 0;
 }

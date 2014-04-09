@@ -25,8 +25,12 @@
 #include <SDL2/SDL.h>
 
 #define D3D_DEBUG_INFO
+#define COBJMACROS
 #include <d3d9.h>
 #include <d3dx9effect.h>
+#include <unknwn.h>
+#undef D3D_DEBUG_INFO
+#undef COBJMACROS
 
 #include "../SDL_shader.h"
 #include "SDL_D3D_shader.h"
@@ -34,7 +38,7 @@
 #include "SDL_D3D_RenderStructs.h"
 #include "SDL_D3D_SDL_internals.c"
 
-#define SAVE_RELEASE(X) if( X != NULL ){ ID3DXBuffer_Release( X ); X=NULL; }
+#define SAFE_RELEASE(X) if ((X)) { IUnknown_Release(SDL_static_cast(IUnknown*, X)); X = NULL; }
 typedef struct {
 	LPDIRECT3DPIXELSHADER9 pixl_shader;
 	LPDIRECT3DVERTEXSHADER9 vert_shader;
@@ -120,7 +124,16 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	SDL_Shader *shader;
 
 	shader = (SDL_Shader*) malloc( sizeof(SDL_Shader) );
+	if ( !shader ) {
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	shader->driver_data = malloc( sizeof(SDL_D3D_ShaderData ) );
+	if ( !shader->driver_data ) {
+		free( shader );
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
 	D3D_RenderData *render_data = (D3D_RenderData*) renderer->driverdata;
 
@@ -139,6 +152,11 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	int ext_len =  9; //strlen(".d3d.hlsl");
 
 	char *file_name = malloc(name_len + ext_len + 1 );
+	if ( !file_name ) {
+		shader->destroyShader(shader);
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	strncpy( file_name, name, name_len );
 	file_name[ name_len + ext_len ] = '\0';
 
@@ -150,16 +168,16 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	shader_version[5] = '0'+vs_version_minor;
 	result = D3DXCompileShaderFromFile(file_name, NULL, NULL, "VertexShaderMain", 
 		shader_version, 0, &code, &error, &(shader_data->vert_symtable));
-	if( FAILED(result)){
+	if ( FAILED(result)){
 		SDL_SetError("SDL_Shader: D3D CompilelShader() failed: \n--\n%s--\n", ID3DXBuffer_GetBufferPointer( error ));
-		SAVE_RELEASE( code );
-		SAVE_RELEASE( error );
+		SAFE_RELEASE( code );
+		SAFE_RELEASE( error );
 		return NULL;
 	}
 	result = IDirect3DDevice9_CreateVertexShader(render_data->device, 
 		(DWORD*) ID3DXBuffer_GetBufferPointer( code ), &shader_data->vert_shader);
-	SAVE_RELEASE( code );
-	SAVE_RELEASE( error );
+	SAFE_RELEASE( code );
+	SAFE_RELEASE( error );
 	if (FAILED(result)) {
 		shader->destroyShader(shader);
 		SDL_SetError("SDL_Shader: D3D CreateVertexShader() failed, errno %d\n", result);
@@ -171,16 +189,17 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	shader_version[5] = '0'+ps_version_minor;
 	result = D3DXCompileShaderFromFile(file_name, NULL, NULL, "PixelShaderMain",
 		shader_version, 0, &code, &error, &(shader_data->pixl_symtable));
-	if( FAILED(result)){
+	if ( FAILED(result)){
+		shader->destroyShader(shader);
 		SDL_SetError("SDL_Shader: D3D CompilelShader() failed: \n--\n%s--\n", ID3DXBuffer_GetBufferPointer( error ));
-		SAVE_RELEASE( code );
-		SAVE_RELEASE( error );
+		SAFE_RELEASE( code );
+		SAFE_RELEASE( error );
 		return NULL;
 	}
 	result = IDirect3DDevice9_CreatePixelShader(render_data->device, 
 		(DWORD*) ID3DXBuffer_GetBufferPointer( code ), &shader_data->pixl_shader);
-	SAVE_RELEASE( code );
-	SAVE_RELEASE( error );
+	SAFE_RELEASE( code );
+	SAFE_RELEASE( error );
 	if (FAILED(result)) {
 		shader->destroyShader(shader);
 		SDL_SetError("SDL_Shader: D3D CreatePixelShader() failed, errno %d\n", result);
@@ -201,7 +220,6 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 int SDL_D3D_bindShader( SDL_Shader* shader ) {
 	SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
 	D3D_RenderData *render_data = (D3D_RenderData*) shader->renderer->driverdata;
-
 	HRESULT result = IDirect3DDevice9_SetPixelShader(render_data->device, shader_data->pixl_shader);
 	if (FAILED(result)) {
 		return SDL_SetError("SDL_Shader: D3D SetPixelShader() failed, errno %d\n", result);
@@ -232,7 +250,11 @@ int SDL_D3D_unbindShader( SDL_Shader* shader ) {
 }
 
 int SDL_D3D_destroyShader( SDL_Shader* shader ) {
-	
+	SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
+	SAFE_RELEASE( shader_data->vert_shader );
+	SAFE_RELEASE( shader_data->pixl_shader );
+	SAFE_RELEASE( shader_data->vert_symtable );
+	SAFE_RELEASE( shader_data->pixl_symtable );
 	shader->unbindShader( shader );
 	free( shader->driver_data );
 	free( shader );
@@ -321,14 +343,14 @@ int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture_sdl,
 	}
 	
 	int r = shader->bindShader(shader);
-	if( r ) return r;
+	if ( r ) return r;
 	result = IDirect3DDevice9_DrawPrimitiveUP(data->device, D3DPT_TRIANGLEFAN, 2,
 			vertices, sizeof(*vertices));
 	if (FAILED(result)) {
 		return SDL_SetError("SDL_Shader: D3D DrawPrimitiveUP() failed, errno %d\n", result);
 	}
 	r = shader->unbindShader(shader);
-	if( r ) return r;
+	if ( r ) return r;
 
 	return 0;
 }
@@ -336,6 +358,10 @@ int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture_sdl,
 SDL_Uniform* SDL_D3D_createUniformFromHandle( SDL_Shader* shader, D3DXHANDLE handle, LPD3DXCONSTANTTABLE table ) {
 	// No validation checks, handle must be valid
 	SDL_Uniform* uniform = (SDL_Uniform*) malloc( sizeof(SDL_Uniform) );
+	if ( !uniform ) {
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	
 	uniform->setUniform_iv  = SDL_D3D_setUniform_iv;
 	uniform->setUniform_i   = SDL_D3D_setUniform_i;
@@ -350,6 +376,11 @@ SDL_Uniform* SDL_D3D_createUniformFromHandle( SDL_Shader* shader, D3DXHANDLE han
 	uniform->setUniform_f4  = SDL_D3D_setUniform_f4;
 
 	SDL_D3D_UniformData* udata = malloc( sizeof(SDL_D3D_UniformData) );
+	if ( !udata ) {
+		free( uniform );
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	udata->handle = handle;
 	udata->table = table;
 	uniform->driver_data =  udata;
@@ -363,12 +394,12 @@ SDL_Uniform* SDL_D3D_createUniform( SDL_Shader* shader, const char* name ) {
 
 	shader->bindShader( shader );
 	handle = ID3DXConstantTable_GetConstantByName( shader_data->vert_symtable, NULL, name );
-	if( handle == NULL ){
+	if ( handle == NULL ){
 		handle = ID3DXConstantTable_GetConstantByName( shader_data->pixl_symtable, NULL, name );
-		if( handle == NULL ){
+		if ( handle == NULL ){
 			SDL_SetError("SDL_Shader: D3D GetParameterByName() failed\n" );
 			return NULL;
-		}else{
+		} else {
 			return SDL_D3D_createUniformFromHandle( shader, handle, shader_data->pixl_symtable );
 		}
 	}
