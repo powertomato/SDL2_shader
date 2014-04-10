@@ -7,7 +7,7 @@
 #include "../src/SDL_shader.h"
 #include "../src/SDL_SYS_RenderStructs.h"
 
-
+#define NUM_OF_TEXTURES (sizeof(formats)/sizeof(Uint32))
 
 #ifdef _WIN32
 //prevents displaying the black console window
@@ -32,8 +32,7 @@ int main(int argc, char** argv)
 	SDL_Renderer *renderer;
 	SDL_Shader *shader;
 
-
-	if( SDL_Init(SDL_INIT_VIDEO) < 0 ){
+	if ( SDL_Init(SDL_INIT_VIDEO) < 0 ){
 		fprintf(stderr, "Error: %s \n", SDL_GetError());
 		return 1;
 	}
@@ -53,13 +52,13 @@ int main(int argc, char** argv)
 			width, height,
 			SDL_WINDOW_RESIZABLE);
 			// SDL_WINDOW_FULLSCREEN_DESKTOP );
-	if( screen == NULL ) {
+	if ( screen == NULL ) {
 		fprintf(stderr, "Error: %s \n", SDL_GetError());
 		return 2;
 	}
 	renderer = SDL_CreateRenderer( screen, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_TARGETTEXTURE );
 	//renderer = SDL_CreateRenderer( screen, -1, SDL_RENDERER_SOFTWARE|SDL_RENDERER_TARGETTEXTURE );
-	if( renderer == NULL ) {
+	if ( renderer == NULL ) {
 		fprintf(stderr, "Error: %s \n", SDL_GetError());
 		return 3;
 	}
@@ -106,14 +105,14 @@ int main(int argc, char** argv)
 	printf("SDL_PIXELFORMAT_ARGB2101010=%d\n",SDL_PIXELFORMAT_ARGB2101010);
 
 	shader = SDL_createShader( renderer, "../shaders/do_nothing/do_nothing" );
-	if( shader == NULL ){
+	if ( shader == NULL ){
 		fprintf(stderr, "Error: %s \n", SDL_GetError());
 		return 4;
 	}
 
 	SDL_Surface* srf;
 	srf = IMG_Load( "../img.png" );
-	if( !srf ) {
+	if ( !srf ) {
 		fprintf(stderr, "Error: %s \n", SDL_GetError());
 		return 5;
 	}
@@ -148,7 +147,7 @@ int main(int argc, char** argv)
 		SDL_PIXELFORMAT_ARGB2101010
 	};
 	
-	char fmt_names[][sizeof(formats)/sizeof(Uint32)] = {
+	char fmt_names[][NUM_OF_TEXTURES] = {
 		"RGB332",
 		"RGB444",
 		"RGB555",
@@ -206,9 +205,9 @@ int main(int argc, char** argv)
 	};
 	int current_color = 0;
 
-	SDL_Texture* textures[ sizeof(formats)/sizeof(Uint32) ];
+	SDL_Texture* textures[ NUM_OF_TEXTURES ];
 	
-	for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
+	for ( i=0; i< (int)(NUM_OF_TEXTURES); i++) {
 		SDL_PixelFormat* fmt = SDL_AllocFormat( formats[i] );
 			SDL_assert(fmt != NULL);
 		SDL_Surface* srf2 = SDL_ConvertSurface(srf, fmt, 0);
@@ -219,11 +218,11 @@ int main(int argc, char** argv)
 		SDL_SetTextureBlendMode(textures[i], blendModes[current_blend]);
 		SDL_FreeSurface( srf2 );
 
-		if( !textures[i] ){
+		if ( !textures[i] ){
 			return 1000 + i;
 		}
 
-		if( textures[i]->native ){
+		if ( textures[i]->native ){
 			printf("native_tex: %d \n",textures[i]->native->format );
 		}else{
 			printf("SDL_tex: %d \n",textures[i]->format );
@@ -237,51 +236,51 @@ int main(int argc, char** argv)
 	SDL_SetRenderDrawColor(renderer, 0,0,0,1);
 	int ret = 0;
 	int quit = 0;
-	while( !quit ) {
+
+	while ( !quit ) {
 		SDLTest_DrawString( renderer,   8,   8, blendNames[current_blend] );
 		SDLTest_DrawString( renderer, 108,   8, colorNames[current_color] );
-		for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
+		for ( i=0; i< (int)(NUM_OF_TEXTURES); i++) {
 			int x=30+(i%8)*55;
 			int y=30+(i/8)*75;
 			SDL_Rect dst = {x,y,50,50};
 			ret = SDL_renderCopyShd( shader, textures[i], NULL, &dst );
-			if( ret!=0 ){
+			if ( ret!=0 ){
 				fprintf(stderr,"Err: %s\n", SDL_GetError());
 			}
 			SDLTest_DrawString( renderer, dst.x,dst.y+55 + (i%2==0 ? 10 : 0), fmt_names[i] );
 			
-			dst.y += (sizeof(formats)/sizeof(Uint32))/8 * 75 + 85;
+			dst.y += (NUM_OF_TEXTURES)/8 * 75 + 85;
 			SDL_RenderCopy( renderer, textures[i], NULL, &dst );
 			SDLTest_DrawString( renderer, dst.x,dst.y+55 + (i%2==0 ? 10 : 0), fmt_names[i] );
-			while (SDL_PollEvent(&e)){
-				switch( e.type ) {
+
+		}
+		while (SDL_PollEvent(&e)){
+			switch ( e.type ) {
 				case SDL_QUIT: 
 					quit = 1; 
 					break;
 				case SDL_KEYDOWN: 
-					switch( e.key.keysym.sym ) {
+					switch ( e.key.keysym.sym ) {
 						case SDLK_SPACE:
 							current_blend = (current_blend+1)%4;
-							for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
+							for ( i=0; i< (int)(NUM_OF_TEXTURES); i++) {
 								SDL_SetTextureBlendMode(textures[i], blendModes[current_blend]);
 							}
 							break;
 						case SDLK_TAB:
 							current_color = (current_color+1)%5;
-							for( i=0; i< (int)(sizeof(formats)/sizeof(Uint32)); i++) {
+							for ( i=0; i< (int)(NUM_OF_TEXTURES); i++) {
 								SDL_SetTextureColorMod(textures[i], 
-									colors[current_color][0],
-									colors[current_color][1],
-									colors[current_color][2]);
+										colors[current_color][0],
+										colors[current_color][1],
+										colors[current_color][2]);
 								SDL_SetTextureAlphaMod(textures[i], colors[current_color][3] );
 							}
 							break;
 					}
 					break;
-				}
 			}
-
-
 		}
 
 		SDL_RenderPresent(renderer);
@@ -291,5 +290,14 @@ int main(int argc, char** argv)
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	}
+	for ( i=0; i<(int)NUM_OF_TEXTURES; i++ ) {
+		SDL_DestroyTexture( textures[i] );
+		textures[i] = NULL;
+	}
+	SDL_destroyShader( shader );
+	SDL_DestroyRenderer( renderer );
+	SDL_DestroyWindow( screen );
+	SDL_Quit();
+
 	return 0;
 }

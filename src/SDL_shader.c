@@ -25,7 +25,7 @@
 #include "opengles2/SDL_GLES2_shader.h"
 #include "opengl/SDL_GL_shader.h"
 #include "d3d/SDL_D3D_shader.h"
-#include "d3d11/SDL_D3D11_shader.h"
+//#include "d3d11/SDL_D3D11_shader.h"
 
 
 #include <stdio.h>

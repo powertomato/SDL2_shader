@@ -31,8 +31,6 @@
 #include "SDL_GLES2_RenderStructs.h"
 
 typedef struct {
-	GLuint v;
-	GLuint f;
 	GLuint p;
 
 	SDL_Uniform* color;
@@ -175,6 +173,8 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	// Does geometry shaders and tessalation make any sense?
 
 	SDL_Shader *shader;
+	GLuint v;
+	GLuint f;
 	char *vs,*fs;
 
 	if( !is_init ){
@@ -182,7 +182,16 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	}
 
 	shader = (SDL_Shader*) malloc( sizeof(SDL_Shader) );
+	if ( !shader ) {
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	shader->driver_data = malloc( sizeof(SDL_GLES2_ShaderData ) );
+	if ( !shader->driver_data ) {
+		free( shader );
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	SDL_GLES2_ShaderData *shader_data = (SDL_GLES2_ShaderData*) shader->driver_data;
 
 	shader->renderer = renderer;
@@ -196,8 +205,8 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	shader->destroyUniform = SDL_GLES2_destroyUniform;
 
 	shader_data->p = 0;
-	shader_data->v = glCreateShader( GL_VERTEX_SHADER );
-	shader_data->f = glCreateShader( GL_FRAGMENT_SHADER );
+	v = glCreateShader( GL_VERTEX_SHADER );
+	f = glCreateShader( GL_FRAGMENT_SHADER );
 	shader_data->color = NULL;
 	shader_data->vport = NULL;
 	shader_data->color_mode = NULL;
@@ -206,6 +215,11 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	int ext_len =  11; //strlen(".gles2.xxxx");
 
 	char *file_name = malloc(name_len + ext_len + 1 );
+	if ( !file_name ) {
+		shader->destroyShader( shader );
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	strncpy( file_name, name, name_len );
 	file_name[ name_len + ext_len ] = '\0';
 
@@ -230,30 +244,30 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 
 	const char* vss = (const char*) vs;
 	const char *fss[] = {fs, color_conv};
-	glShaderSource(shader_data->v, 1, &vss,NULL);
-	glShaderSource(shader_data->f, 2, fss,NULL);
+	glShaderSource(v, 1, &vss,NULL);
+	glShaderSource(f, 2, fss,NULL);
 
 	free(file_name);
 	free(vs);
 	free(fs);
 
-	glCompileShader( shader_data->v );
-	if( !SDL_GLES2_CompileSuccessful(shader_data->v) ){
+	glCompileShader( v );
+	if( !SDL_GLES2_CompileSuccessful(v) ){
 
 		GLchar buff[512];
 		GLsizei len;
-		glGetShaderInfoLog(shader_data->v, 512, &len, buff);
+		glGetShaderInfoLog(v, 512, &len, buff);
 
 		SDL_SetError("SDL_Shader: OpenGL Could not compile vertex shader: \n-------\n%s\n-------\n", buff );
 		shader->destroyShader(shader);
 		return NULL;
 	}
-	glCompileShader( shader_data->f );
-	if( !SDL_GLES2_CompileSuccessful(shader_data->f) ){
+	glCompileShader( f );
+	if( !SDL_GLES2_CompileSuccessful(f) ){
 
 		GLchar buff[512];
 		GLsizei len;
-		glGetShaderInfoLog(shader_data->f, 512, &len, buff);
+		glGetShaderInfoLog(f, 512, &len, buff);
 
 		SDL_SetError("SDL_Shader: OpenGL Could not compile fragment shader: \n-------\n%s\n-------\n", buff );
 		shader->destroyShader(shader);
@@ -262,8 +276,8 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 
 	shader_data->p = glCreateProgram();
 
-	glAttachShader( shader_data->p,shader_data->v );
-	glAttachShader( shader_data->p,shader_data->f );
+	glAttachShader( shader_data->p,v );
+	glAttachShader( shader_data->p,f );
 
 	glBindAttribLocation( shader_data->p, GLES2_ATTRIBUTE_POSITION, "position");
 	glBindAttribLocation( shader_data->p, GLES2_ATTRIBUTE_TEXCOORD, "texCoords");
@@ -282,8 +296,8 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 
 	shader->bindShader(shader);
 
-	glDeleteShader( shader_data->v );
-	glDeleteShader( shader_data->f );
+	glDeleteShader( v );
+	glDeleteShader( f );
 
 	shader_data->vport = SDL_createUniform(shader,"world_view_projection");
 	SDL_GLES2_updateViewport( shader );
@@ -297,28 +311,23 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 }
 
 int SDL_GLES2_bindShader( SDL_Shader* shader ) {
-	// TODO check gl, sdl return code compatibility, error handling
 	SDL_GLES2_ShaderData *shader_data = (SDL_GLES2_ShaderData*) shader->driver_data;
-	glUseProgram( shader_data->p ); //XXX
-	return 0;
+	glUseProgram( shader_data->p );
+	return glGetError();
 }
 
 int SDL_GLES2_unbindShader( SDL_Shader* shader ) {
-	// TODO check gl, sdl return code compatibility, error handling
-	glUseProgram( 0 ); //XXX
-	return 0;
+	GLES2_DriverContext *data = (GLES2_DriverContext *) shader->renderer->driverdata;
+	glUseProgram( data->current_program->id );
+	return glGetError();
 }
 
 int SDL_GLES2_destroyShader( SDL_Shader* shader ) {
-	// SDL_GLES2_ShaderData *shader_data = (SDL_GLES2_ShaderData*) shader->driver_data;
-	// TODO GL destroy stuff
 	SDL_GLES2_ShaderData *shader_data = (SDL_GLES2_ShaderData*) shader->driver_data;
-	if( shader_data->f ) glDeleteShader( shader_data->f );
-	if( shader_data->v ) glDeleteShader( shader_data->v );
-	if( shader_data->p ) glDeleteShader( shader_data->p );
-	shader->unbindShader( shader );
 	shader->destroyUniform( shader, shader_data->color );
+	shader->destroyUniform( shader, shader_data->color_mode );
 	shader->destroyUniform( shader, shader_data->vport );
+	if( shader_data->p ) glDeleteShader( shader_data->p );
 	free( shader->driver_data );
 	free( shader );
 	return 0;
@@ -375,6 +384,11 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 				glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
 				break;
 		}
+		data->current.blendMode = texture->blendMode;
+	}
+	if( !data->current.tex_coords ){
+		data->glEnableVertexAttribArray(GLES2_ATTRIBUTE_TEXCOORD);
+		data->current.tex_coords = SDL_TRUE;
 	}
 
     vertices[0] = dstrect.x;
@@ -399,39 +413,9 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
     data->glVertexAttribPointer(GLES2_ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, GL_FALSE, 0, texCoords);
     data->glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-
-	//shader->unbindShader(shader);
-	if( data->current_program ) {
-		//glUseProgram( data->current_program->id ); //XXX
-	}
-	//FIXME hack, changes SDLs internal shader to retrieve a known state
-	SDL_RenderDrawPoint(shader->renderer, -1,-1 );
-	//hack end
+	shader->unbindShader(shader);
 	
-    if (texture->blendMode != data->current.blendMode) {
-		switch (data->current.blendMode) {
-			case SDL_BLENDMODE_NONE:
-				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-				glDisable(GL_BLEND);
-				break;
-			case SDL_BLENDMODE_BLEND:
-				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				glEnable(GL_BLEND);
-				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-				break;
-			case SDL_BLENDMODE_ADD:
-				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				glEnable(GL_BLEND);
-				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
-				break;
-			case SDL_BLENDMODE_MOD:
-				//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				glEnable(GL_BLEND);
-				glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
-				break;
-		}
-	}
-	return 0;
+	return glGetError();
 }
 
 SDL_Uniform* SDL_GLES2_createUniform( SDL_Shader* shader, const char* name ) {
@@ -442,7 +426,16 @@ SDL_Uniform* SDL_GLES2_createUniform( SDL_Shader* shader, const char* name ) {
 		return NULL;
 
 	SDL_Uniform* uniform = (SDL_Uniform*) malloc( sizeof(SDL_Uniform) );
+	if ( !uniform ) {
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*) malloc( sizeof(SDL_GLES2_UniformData) );
+	if ( !udata ) {
+		free( uniform );
+		SDL_OutOfMemory();
+		return NULL;
+	}
 
 	uniform->shader = shader;
 
@@ -476,60 +469,60 @@ int SDL_GLES2_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform ){
 int SDL_GLES2_setUniform_matrix( SDL_Uniform* uniform, GLfloat* mat ) {
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniformMatrix4fv( udata->loc, 1, GL_FALSE, mat );
-	return 0;
+	return glGetError();
 }
 
 int SDL_GLES2_setUniform_fv( SDL_Uniform* uniform, float* vector, int num ) {
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform1fv( udata->loc, num, vector);
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_f(  SDL_Uniform* uniform, float a ) {
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform1f(udata->loc, a );
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_f2( SDL_Uniform* uniform, float a, float b ){
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform2f(udata->loc, a,b );
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_f3( SDL_Uniform* uniform, float a, float b, float c ){
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform3f(udata->loc, a,b,c );
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_f4( SDL_Uniform* uniform, float a, float b, float c, float d ){
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform4f(udata->loc, a,b,c,d );
-	return 0;
+	return glGetError();
 }
 
 
 int SDL_GLES2_setUniform_iv( SDL_Uniform* uniform, int* vector, int num ) {
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform1iv( udata->loc, num, vector);
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_i(  SDL_Uniform* uniform, int a ) {
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform1i(udata->loc, a );
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_i2( SDL_Uniform* uniform, int a, int b ){
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform2i(udata->loc, a,b );
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_i3( SDL_Uniform* uniform, int a, int b, int c ){
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform3i(udata->loc, a,b,c );
-	return 0;
+	return glGetError();
 }
 int SDL_GLES2_setUniform_i4( SDL_Uniform* uniform, int a, int b, int c, int d ){
 	SDL_GLES2_UniformData* udata = (SDL_GLES2_UniformData*)uniform->driver_data;
 	glUniform4i(udata->loc, a,b,c,d );
-	return 0;
+	return glGetError();
 }
 
 #else

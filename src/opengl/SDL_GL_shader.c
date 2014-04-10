@@ -24,8 +24,40 @@
 #include <stdio.h>
 #ifdef _WIN32
 #include <SDL2/SDL_opengl.h>
-//#define GLEW_STATIC
-//#include <GL/glew.h>
+#include <GL/glext.h>
+
+#define SDL_PROC(ret,func,params) typedef ret (APIENTRY * func##_type) params; func##_type func;
+SDL_PROC(void, glUniform1f, (GLint, GLfloat) )
+SDL_PROC(void, glUniform2f, (GLint, GLfloat, GLfloat) )
+SDL_PROC(void, glUniform3f, (GLint, GLfloat, GLfloat, GLfloat) )
+SDL_PROC(void, glUniform4f, (GLint, GLfloat, GLfloat, GLfloat, GLfloat) )
+SDL_PROC(void, glUniform1fv, (GLint, GLsizei, const GLfloat*) )
+
+SDL_PROC(void, glUniform1i, (GLint, GLint) )
+SDL_PROC(void, glUniform2i, (GLint, GLint, GLint) )
+SDL_PROC(void, glUniform3i, (GLint, GLint, GLint, GLint) )
+SDL_PROC(void, glUniform4i, (GLint, GLint, GLint, GLint, GLint) )
+SDL_PROC(void, glUniform1iv, (GLint, GLsizei, const GLint*) )
+SDL_PROC(void, glGetShaderiv, (GLuint, GLenum,  GLint*) )
+SDL_PROC(void, glGetProgramiv, (GLuint,  GLenum, GLint*) )
+SDL_PROC(GLuint, glCreateShader, (GLenum) )
+SDL_PROC(void, glShaderSource, (GLuint, GLsizei, const GLchar* const*,  const GLint*) )
+SDL_PROC(void, glCompileShader, (GLuint) )
+SDL_PROC(void, glGetShaderInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*) )
+SDL_PROC(void, glBindAttribLocation, (GLuint, GLuint, const GLchar*) )
+SDL_PROC(GLuint, glCreateProgram, (void) )
+SDL_PROC(void, glAttachShader, (GLuint, GLuint) )
+SDL_PROC(void, glLinkProgram, (GLuint) )
+SDL_PROC(void, glGetProgramInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*) )
+SDL_PROC(void, glDeleteShader, (GLuint) )
+SDL_PROC(void, glEnableVertexAttribArray, (GLuint) )
+SDL_PROC(void, glVertexAttribPointer, (GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid* ) )
+SDL_PROC(void, glUniformMatrix4fv, (GLint, GLsizei, GLboolean, const GLfloat*) )
+SDL_PROC(GLint, glGetUniformLocation, (GLuint, const GLchar*) )
+SDL_PROC(void, glUseProgram, (GLuint) )
+#undef SDL_PROC
+
+#undef GL_GLEXT_PROTOTYPES
 #endif
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -36,8 +68,6 @@
 #include "SDL_GL_RenderStructs.h"
 
 typedef struct {
-	GLuint v;
-	GLuint f;
 	GLuint p;
 
 	SDL_Uniform* color;
@@ -143,13 +173,25 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	// Does geometry shaders and tessalation make any sense?
 
 	SDL_Shader *shader;
+	GLuint v;
+	GLuint f;
+
 	char *vs,*fs;
 	if( !is_init ){
 		SDL_GL_init();
 	}
 
 	shader = (SDL_Shader*) malloc( sizeof(SDL_Shader) );
+	if( !shader ){
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	shader->driver_data = malloc( sizeof(SDL_GL_ShaderData ) );
+	if ( !shader->driver_data ) {
+		free( shader->driver_data );
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
 
 	shader->renderer = renderer;
@@ -163,8 +205,40 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	shader->destroyUniform = SDL_GL_destroyUniform;
 
 	shader_data->p = 0;
-	shader_data->v = glCreateShader( GL_VERTEX_SHADER );
-	shader_data->f = glCreateShader( GL_FRAGMENT_SHADER );
+
+#ifdef _WIN32
+	glUniform1f = (glUniform1f_type) SDL_GL_GetProcAddress("glUniform1f");
+	glUniform2f = (glUniform2f_type) SDL_GL_GetProcAddress("glUniform2f");
+	glUniform3f = (glUniform3f_type) SDL_GL_GetProcAddress("glUniform3f");
+	glUniform4f = (glUniform4f_type) SDL_GL_GetProcAddress("glUniform4f");
+	glUniform1fv = (glUniform1fv_type) SDL_GL_GetProcAddress("glUniform1fv");
+
+	glUniform1i = (glUniform1i_type) SDL_GL_GetProcAddress("glUniform1i");
+	glUniform2i = (glUniform2i_type) SDL_GL_GetProcAddress("glUniform2i");
+	glUniform3i = (glUniform3i_type) SDL_GL_GetProcAddress("glUniform3i");
+	glUniform4i = (glUniform4i_type) SDL_GL_GetProcAddress("glUniform4i");
+	glUniform1iv = (glUniform1iv_type) SDL_GL_GetProcAddress("glUniform1iv");
+	glGetShaderiv = (glGetShaderiv_type) SDL_GL_GetProcAddress("glGetShaderiv");
+	glGetProgramiv = (glGetProgramiv_type) SDL_GL_GetProcAddress("glGetProgramiv");
+	glCreateShader = (glCreateShader_type) SDL_GL_GetProcAddress("glCreateShader");
+	glShaderSource = (glShaderSource_type) SDL_GL_GetProcAddress("glShaderSource");
+	glCompileShader = (glCompileShader_type) SDL_GL_GetProcAddress("glCompileShader");
+	glGetShaderInfoLog = (glGetShaderInfoLog_type) SDL_GL_GetProcAddress("glGetShaderInfoLog");
+	glBindAttribLocation = (glBindAttribLocation_type) SDL_GL_GetProcAddress("glBindAttribLocation");
+	glCreateProgram = (glCreateProgram_type) SDL_GL_GetProcAddress("glCreateProgram");
+	glAttachShader = (glAttachShader_type) SDL_GL_GetProcAddress("glAttachShader");
+	glLinkProgram = (glLinkProgram_type) SDL_GL_GetProcAddress("glLinkProgram");
+	glGetProgramInfoLog = (glGetProgramInfoLog_type) SDL_GL_GetProcAddress("glGetProgramInfoLog");
+	glDeleteShader = (glDeleteShader_type) SDL_GL_GetProcAddress("glDeleteShader");
+	glEnableVertexAttribArray = (glEnableVertexAttribArray_type) SDL_GL_GetProcAddress("glEnableVertexAttribArray");
+	glVertexAttribPointer = (glVertexAttribPointer_type) SDL_GL_GetProcAddress("glVertexAttribPointer");
+	glUniformMatrix4fv = (glUniformMatrix4fv_type) SDL_GL_GetProcAddress("glUniformMatrix4fv");
+	glGetUniformLocation = (glGetUniformLocation_type) SDL_GL_GetProcAddress("glGetUniformLocation");
+	glUseProgram = (glUseProgram_type) SDL_GL_GetProcAddress("glUseProgram");
+#endif
+
+	v = glCreateShader( GL_VERTEX_SHADER );
+	f = glCreateShader( GL_FRAGMENT_SHADER );
 	shader_data->color = NULL;
 	shader_data->vport = NULL;
 	shader_data->color_mode = NULL;
@@ -173,6 +247,13 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	int ext_len =  8; //strlen(".gl.xxxx");
 
 	char *file_name = malloc(name_len + ext_len + 1 );
+	if( !file_name ){
+		shader->destroyShader( shader );
+		SDL_OutOfMemory();
+		return NULL;
+	}
+
+
 	strncpy( file_name, name, name_len );
 	file_name[ name_len + ext_len ] = '\0';
 
@@ -197,30 +278,30 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 
 	const char* vss = (const char*) vs;
 	const char *fss[] = {fs, color_conv};
-	glShaderSource(shader_data->v, 1, &vss,NULL);
-	glShaderSource(shader_data->f, 2, fss,NULL);
+	glShaderSource(v, 1, &vss,NULL);
+	glShaderSource(f, 2, fss,NULL);
 
 	free(file_name);
 	free(vs);
 	free(fs);
 
-	glCompileShader( shader_data->v );
-	if( !SDL_GL_CompileSuccessful(shader_data->v) ){
+	glCompileShader( v );
+	if( !SDL_GL_CompileSuccessful(v) ){
 
 		GLchar buff[512];
 		GLsizei len;
-		glGetShaderInfoLog(shader_data->v, 512, &len, buff);
+		glGetShaderInfoLog(v, 512, &len, buff);
 
 		SDL_SetError("SDL_Shader: OpenGL Could not compile vertex shader: \n-------\n%s\n-------\n", buff );
 		shader->destroyShader(shader);
 		return NULL;
 	}
-	glCompileShader( shader_data->f );
-	if( !SDL_GL_CompileSuccessful(shader_data->f) ){
+	glCompileShader( f );
+	if( !SDL_GL_CompileSuccessful(f) ){
 
 		GLchar buff[512];
 		GLsizei len;
-		glGetShaderInfoLog(shader_data->f, 512, &len, buff);
+		glGetShaderInfoLog(f, 512, &len, buff);
 
 		SDL_SetError("SDL_Shader: OpenGL Could not compile fragment shader: \n-------\n%s\n-------\n", buff );
 		shader->destroyShader(shader);
@@ -229,8 +310,8 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 
 	shader_data->p = glCreateProgram();
 
-	glAttachShader( shader_data->p,shader_data->v );
-	glAttachShader( shader_data->p,shader_data->f );
+	glAttachShader( shader_data->p,v );
+	glAttachShader( shader_data->p,f );
 
 	glBindAttribLocation( shader_data->p, GL_ATTRIBUTE_POSITION, "position");
 	glBindAttribLocation( shader_data->p, GL_ATTRIBUTE_TEXCOORD, "texCoords");
@@ -249,8 +330,8 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 
 	shader->bindShader(shader);
 
-	glDeleteShader( shader_data->v );
-	glDeleteShader( shader_data->f );
+	glDeleteShader( v );
+	glDeleteShader( f );
 
     if ( renderer->viewport.w && renderer->viewport.h) {
 		shader_data->vport = SDL_createUniform(shader,"world_view_projection");
@@ -293,31 +374,26 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 }
 
 int SDL_GL_bindShader( SDL_Shader* shader ) {
-	// TODO check gl, sdl return code compatibility, error handling
 	SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
-	glUseProgram( shader_data->p ); //XXX
-	return 0;
+	glUseProgram( shader_data->p );
+	return glGetError();
 }
 
 int SDL_GL_unbindShader( SDL_Shader* shader ) {
-	// TODO check gl, sdl return code compatibility, error handling
-	glUseProgram( 0 ); //XXX
-	return 0;
+	glUseProgram( 0 );
+	return glGetError();
 }
 
 int SDL_GL_destroyShader( SDL_Shader* shader ) {
 	// SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
-	// TODO GL destroy stuff
-	// 
 	if( !shader )
 		return 0;
 	SDL_GL_ShaderData *shader_data = (SDL_GL_ShaderData*) shader->driver_data;
-	if( shader_data->f ) glDeleteShader( shader_data->f );
-	if( shader_data->v ) glDeleteShader( shader_data->v );
-	if( shader_data->p ) glDeleteShader( shader_data->p );
-	shader->unbindShader( shader );
+	shader->destroyUniform(shader, shader_data->color_mode );
 	shader->destroyUniform(shader, shader_data->color );
 	shader->destroyUniform(shader, shader_data->vport );
+	if( shader_data->p ) glDeleteShader( shader_data->p );
+	shader->unbindShader( shader );
 	free( shader->driver_data );
 	free( shader );
 	return 0;
@@ -339,10 +415,12 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
         return SDL_SetError("SDL_Shader: OpenGL YUV-textures not supported");
     }
 
+
 	SDL_GL_MakeCurrent(shader->renderer->window, data->context);
 	SDL_GL_BindTexture(texture, &width, &height );
 
 	shader->bindShader(shader);
+	data->current.shader = SHADER_NONE;
 	if (texture->modMode ) {
 		if( shader_data->color ) SDL_GL_setUniform_f4( shader_data->color,
 				(GLfloat) texture->r * inv255f,
@@ -358,28 +436,31 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 		SDL_GL_setUniform_i( shader_data->color_mode, texture->format);
 	}
 
+    data->current.shader = SHADER_NONE;
     if (texture->blendMode != data->current.blendMode) {
+
 		switch (texture->blendMode) {
 			case SDL_BLENDMODE_NONE:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-				data->glDisable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				glDisable(GL_BLEND);
 				break;
 			case SDL_BLENDMODE_BLEND:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
 				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 				break;
 			case SDL_BLENDMODE_ADD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
 				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
 				break;
 			case SDL_BLENDMODE_MOD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
 				data->glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
 				break;
 		}
+		data->current.blendMode = texture->blendMode;
 	}
 
     GLfloat vertices[8];
@@ -418,33 +499,7 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 
 	shader->unbindShader(shader);
 
-	//FIXME hack, changes SDLs internal shader to retrieve a known state
-	SDL_RenderDrawPoint(shader->renderer, -1,-1 );
-	//hack end
-    if (texture->blendMode != data->current.blendMode) {
-		switch (data->current.blendMode) {
-			case SDL_BLENDMODE_NONE:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-				data->glDisable(GL_BLEND);
-				break;
-			case SDL_BLENDMODE_BLEND:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
-				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-				break;
-			case SDL_BLENDMODE_ADD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
-				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
-				break;
-			case SDL_BLENDMODE_MOD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
-				data->glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
-				break;
-		}
-	}
-	return 0;
+	return glGetError();
 }
 
 SDL_Uniform* SDL_GL_createUniform( SDL_Shader* shader, const char* name ) {
@@ -455,7 +510,16 @@ SDL_Uniform* SDL_GL_createUniform( SDL_Shader* shader, const char* name ) {
 		return NULL;
 
 	SDL_Uniform* uniform = (SDL_Uniform*) malloc( sizeof(SDL_Uniform) );
+	if( !uniform ){
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*) malloc( sizeof(SDL_GL_UniformData) );
+	if( !udata ){
+		free(uniform);
+		SDL_OutOfMemory();
+		return NULL;
+	}
 
 	uniform->shader = shader;
 
@@ -479,8 +543,6 @@ SDL_Uniform* SDL_GL_createUniform( SDL_Shader* shader, const char* name ) {
 
 }
 int SDL_GL_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform ){
-	if( !uniform )
-		return 0;
 	free(uniform->driver_data);
 	free(uniform);
 	return 0;
@@ -489,60 +551,61 @@ int SDL_GL_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform ){
 int SDL_GL_setUniform_matrix( SDL_Uniform* uniform, GLfloat* mat ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniformMatrix4fv( udata->loc, 1, GL_FALSE, mat );
-	return 0;
+	return glGetError();
 }
+	// TODO check gl, sdl return code compatibility, error handling
 
 int SDL_GL_setUniform_fv( SDL_Uniform* uniform, float* vector, int num ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1fv( udata->loc, num, vector);
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f(  SDL_Uniform* uniform, float a ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1f(udata->loc, a );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f2( SDL_Uniform* uniform, float a, float b ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform2f(udata->loc, a,b );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f3( SDL_Uniform* uniform, float a, float b, float c ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform3f(udata->loc, a,b,c );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_f4( SDL_Uniform* uniform, float a, float b, float c, float d ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform4f(udata->loc, a,b,c,d );
-	return 0;
+	return glGetError();
 }
 
 
 int SDL_GL_setUniform_iv( SDL_Uniform* uniform, int* vector, int num ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1iv( udata->loc, num, vector);
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i(  SDL_Uniform* uniform, int a ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform1i(udata->loc, a );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i2( SDL_Uniform* uniform, int a, int b ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform2i(udata->loc, a,b );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i3( SDL_Uniform* uniform, int a, int b, int c ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform3i(udata->loc, a,b,c );
-	return 0;
+	return glGetError();
 }
 int SDL_GL_setUniform_i4( SDL_Uniform* uniform, int a, int b, int c, int d ){
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;
 	glUniform4i(udata->loc, a,b,c,d );
-	return 0;
+	return glGetError();
 }
 
 #else
