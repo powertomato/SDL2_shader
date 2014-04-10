@@ -74,7 +74,7 @@ typedef struct {
 	SDL_Uniform* vport;
 	SDL_Uniform* color_mode;
 } SDL_GL_ShaderData;
-extern char* textFileRead(const char* path);
+extern char* SDL_Shader_readRW( SDL_RWops* rwop );
 
 typedef struct {
 	GLuint p;
@@ -168,9 +168,9 @@ static int SDL_GL_LinkSuccessful(int obj) {
 }
 
 int SDL_GL_setUniform_matrix( SDL_Uniform* uniform, GLfloat* mat );
-SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
-	//TODO error handling, on error return NULL and SDL_SetError(fmt,...)
-	// Does geometry shaders and tessalation make any sense?
+SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer,
+	SDL_ShaderStream* shdstream )
+{
 
 	SDL_Shader *shader;
 	GLuint v;
@@ -243,36 +243,18 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	shader_data->vport = NULL;
 	shader_data->color_mode = NULL;
 
-	int name_len = strlen( name );
-	int ext_len =  8; //strlen(".gl.xxxx");
-
-	char *file_name = malloc(name_len + ext_len + 1 );
-	if( !file_name ){
-		shader->destroyShader( shader );
+	vs = SDL_Shader_readRW( shdstream->vshader );
+	if( vs==NULL ){
+		shader->destroyShader(shader);
 		SDL_OutOfMemory();
 		return NULL;
 	}
 
-
-	strncpy( file_name, name, name_len );
-	file_name[ name_len + ext_len ] = '\0';
-
-	strncpy( file_name + name_len, ".gl.vert", ext_len );
-	vs = textFileRead( file_name );
-	if( vs==NULL ){
-		SDL_SetError("SDL_Shader: OpenGL Could not open file '%s'\n", file_name);
-		free(file_name);
-		shader->destroyShader(shader);
-		return NULL;
-	}
-
-	strncpy( file_name + name_len, ".gl.frag", ext_len );
-	fs = textFileRead( file_name );
+	fs = SDL_Shader_readRW( shdstream->pshader );
 	if( fs==NULL ){
-		SDL_SetError("SDL_Shader: OpenGL Could not open file '%s'\n", file_name);
 		free(fs);
-		free(file_name);
 		shader->destroyShader(shader);
+		SDL_OutOfMemory();
 		return NULL;
 	}
 
@@ -281,7 +263,6 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	glShaderSource(v, 1, &vss,NULL);
 	glShaderSource(f, 2, fss,NULL);
 
-	free(file_name);
 	free(vs);
 	free(fs);
 
@@ -553,7 +534,6 @@ int SDL_GL_setUniform_matrix( SDL_Uniform* uniform, GLfloat* mat ) {
 	glUniformMatrix4fv( udata->loc, 1, GL_FALSE, mat );
 	return glGetError();
 }
-	// TODO check gl, sdl return code compatibility, error handling
 
 int SDL_GL_setUniform_fv( SDL_Uniform* uniform, float* vector, int num ) {
 	SDL_GL_UniformData* udata = (SDL_GL_UniformData*)uniform->driver_data;

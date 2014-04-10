@@ -37,7 +37,7 @@ typedef struct {
 	SDL_Uniform* vport;
 	SDL_Uniform* color_mode;
 } SDL_GLES2_ShaderData;
-extern char* textFileRead(const char* path);
+extern char* SDL_Shader_readRW( SDL_RWops* rwop );
 
 typedef struct {
 	GLuint p;
@@ -112,8 +112,6 @@ void SDL_GLES2_init() {
 
 void SDL_GLES2_hint(sdl_shader_hint flag, void* value) {
 	switch(flag) {
-		//case SDL_GLES2SL_VERSION: GLSL_version = *((int*)value); break;
-		//case SDL_GLES2_VERSION: GLSL_version = *((int*)value); break;
 		default: /* nothing */ break;
 	}
 }
@@ -168,9 +166,9 @@ static void SDL_GLES2_updateViewport( SDL_Shader* shader ) {
 }
 
 
-SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
-	//TODO error handling, on error return NULL and SDL_SetError(fmt,...)
-	// Does geometry shaders and tessalation make any sense?
+SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer,
+	SDL_ShaderStream *shdstream )
+{
 
 	SDL_Shader *shader;
 	GLuint v;
@@ -211,34 +209,18 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	shader_data->vport = NULL;
 	shader_data->color_mode = NULL;
 
-	int name_len = strlen( name );
-	int ext_len =  11; //strlen(".gles2.xxxx");
-
-	char *file_name = malloc(name_len + ext_len + 1 );
-	if ( !file_name ) {
-		shader->destroyShader( shader );
+	vs = SDL_Shader_readRW( shdstream->vshader );
+	if( vs==NULL ){
+		shader->destroyShader(shader);
 		SDL_OutOfMemory();
 		return NULL;
 	}
-	strncpy( file_name, name, name_len );
-	file_name[ name_len + ext_len ] = '\0';
 
-	strncpy( file_name + name_len, ".gles2.vert", ext_len );
-	vs = textFileRead( file_name );
-	if( vs==NULL ){
-		SDL_SetError("SDL_Shader: OpenGL Could not open file '%s'\n", file_name);
-		free(file_name);
-		shader->destroyShader(shader);
-		return NULL;
-	}
-
-	strncpy( file_name + name_len, ".gles2.frag", ext_len );
-	fs = textFileRead( file_name );
+	fs = SDL_Shader_readRW( shdstream->pshader );
 	if( fs==NULL ){
-		SDL_SetError("SDL_Shader: OpenGL Could not open file '%s'\n", file_name);
 		free(fs);
-		free(file_name);
 		shader->destroyShader(shader);
+		SDL_OutOfMemory();
 		return NULL;
 	}
 
@@ -247,7 +229,6 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer, const char *name){
 	glShaderSource(v, 1, &vss,NULL);
 	glShaderSource(f, 2, fss,NULL);
 
-	free(file_name);
 	free(vs);
 	free(fs);
 

@@ -118,8 +118,10 @@ static void SDL_D3D_updateViewport( SDL_Shader* shader ) {
 	}
 }
 
-extern char* textFileRead(const char* path);
-SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
+extern char* SDL_Shader_readRW( SDL_RWops* rwop );
+SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
+	SDL_ShaderStream* shdstream )
+{
 
 	SDL_Shader *shader;
 
@@ -148,25 +150,18 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	shader->destroyUniform = SDL_D3D_destroyUniform;
 
 	HRESULT result;
-	int name_len = strlen( name );
-	int ext_len =  9; //strlen(".d3d.hlsl");
-
-	char *file_name = malloc(name_len + ext_len + 1 );
-	if ( !file_name ) {
-		shader->destroyShader(shader);
-		SDL_OutOfMemory();
-		return NULL;
-	}
-	strncpy( file_name, name, name_len );
-	file_name[ name_len + ext_len ] = '\0';
 
 	LPD3DXBUFFER code,error;
 	char shader_version[8] = "vs_x_x";
-	strncpy( file_name + name_len, ".d3d.hlsl", ext_len );
 
+	char* buff = SDL_Shader_readRW( shdstream->vshader );
+	if( !buff ){
+		SDL_OutOfMemory();
+		return NULL;
+	}
 	shader_version[3] = '0'+vs_version_major;
 	shader_version[5] = '0'+vs_version_minor;
-	result = D3DXCompileShaderFromFile(file_name, NULL, NULL, "VertexShaderMain", 
+	result = D3DXCompileShader(buff, strlen(buff), NULL, NULL, "VertexShaderMain",
 		shader_version, 0, &code, &error, &(shader_data->vert_symtable));
 	if ( FAILED(result)){
 		SDL_SetError("SDL_Shader: D3D CompilelShader() failed: \n--\n%s--\n", ID3DXBuffer_GetBufferPointer( error ));
@@ -187,7 +182,7 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 	shader_version[0] = 'p';
 	shader_version[3] = '0'+ps_version_major;
 	shader_version[5] = '0'+ps_version_minor;
-	result = D3DXCompileShaderFromFile(file_name, NULL, NULL, "PixelShaderMain",
+	result = D3DXCompileShader(buff, strlen(buff), NULL, NULL, "PixelShaderMain",
 		shader_version, 0, &code, &error, &(shader_data->pixl_symtable));
 	if ( FAILED(result)){
 		shader->destroyShader(shader);
@@ -200,13 +195,12 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name ) {
 		(DWORD*) ID3DXBuffer_GetBufferPointer( code ), &shader_data->pixl_shader);
 	SAFE_RELEASE( code );
 	SAFE_RELEASE( error );
+	free( buff );
 	if (FAILED(result)) {
 		shader->destroyShader(shader);
 		SDL_SetError("SDL_Shader: D3D CreatePixelShader() failed, errno %d\n", result);
 		return NULL;
 	}
-
-	free(file_name);
 
 	shader_data->vport = SDL_createUniform(shader, "world_view_projection");
 

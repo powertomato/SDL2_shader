@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 void SDL_GL_hint(sdl_shader_hint flag, void* value);
-SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name );
+SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, SDL_ShaderStream* str );
 int SDL_GL_destroyShader( SDL_Shader* shader );
 int SDL_GL_bindShader( SDL_Shader* shader );
 int SDL_GL_unbindShader( SDL_Shader* shader );

@@ -29,7 +29,8 @@ extern "C" {
 #endif
 
 void SDL_D3D_hint(sdl_shader_hint flag, void* value);
-SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer, const char *name );
+SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
+	SDL_ShaderStream* shdstream );
 int SDL_D3D_destroyShader( SDL_Shader* shader );
 int SDL_D3D_bindShader( SDL_Shader* shader );
 int SDL_D3D_unbindShader( SDL_Shader* shader );

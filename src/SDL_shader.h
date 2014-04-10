@@ -40,6 +40,16 @@ typedef enum {
 	SDL_D3D11_PS_MINOR_VERSION,
 } sdl_shader_hint;
 
+typedef struct {
+	char* vshader;
+	char* pshader;
+} SDL_ShaderFileNames;
+
+typedef struct {
+	SDL_RWops* vshader;
+	SDL_RWops* pshader;
+} SDL_ShaderStream;
+
 typedef struct SDL_Shader_t SDL_Shader;
 typedef struct SDL_Uniform_t SDL_Uniform;
 struct SDL_Uniform_t{
@@ -64,7 +74,8 @@ struct SDL_Uniform_t{
 struct SDL_Shader_t {
 	SDL_Renderer* renderer;
 
-	SDL_Shader* (*create_shader)( SDL_Renderer *renderer, const char* name );
+	SDL_Shader* (*create_shader)( SDL_Renderer *renderer, SDL_ShaderStream* str );
+
 	int (*bindShader)( SDL_Shader* shader );
 	int (*unbindShader)( SDL_Shader* shader );
 	int (*destroyShader)( SDL_Shader* shader );
@@ -80,7 +91,15 @@ struct SDL_Shader_t {
 
 
 void SDL_hint(sdl_shader_hint flag, void* value);
+
+
+SDL_ShaderFileNames SDL_getShaderFileNames( SDL_Renderer* renderer, 
+	const char* name );
+SDL_ShaderStream SDL_getShaderStream( SDL_ShaderFileNames* names, int delete_ );
+
 SDL_Shader* SDL_createShader( SDL_Renderer *renderer, const char* name );
+SDL_Shader* SDL_createShader_RW( SDL_Renderer *renderer, 
+	SDL_ShaderStream* shdstream, int close );
 int SDL_destroyShader( SDL_Shader* shader );
 int SDL_bindShader( SDL_Shader* shader );
 int SDL_renderCopyShd( SDL_Shader* shader, SDL_Texture* texture,

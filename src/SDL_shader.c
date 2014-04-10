@@ -20,6 +20,7 @@
 */
 
 #include <SDL2/SDL.h>
+#include <string.h>
 #include "SDL_SYS_RenderStructs.h"
 #include "SDL_shader.h"
 #include "opengles2/SDL_GLES2_shader.h"
@@ -30,14 +31,21 @@
 
 #include <stdio.h>
 SDL_Shader* SDL_createShader( SDL_Renderer *renderer, const char* name ) {
+	SDL_ShaderFileNames names = SDL_getShaderFileNames( renderer, name );
+	SDL_ShaderStream stream = SDL_getShaderStream( &names, 1 );
+	return SDL_createShader_RW( renderer, &stream, 1 );
+}
 
+SDL_Shader* SDL_createShader_RW( SDL_Renderer *renderer,
+	SDL_ShaderStream* shdstream, int close )
+{
 	SDL_Shader* shader = NULL;
 	SDL_SetError("SDL_Shader: No shading available for renderer '%s'\n", renderer->info.name);
 
 
 #ifdef SDL_SHADER_OPENGL
 	if( strcmp( renderer->info.name, "opengl" )==0 ) {
-		shader = SDL_GL_createShader( renderer, name );
+		shader = SDL_GL_createShader( renderer, shdstream );
 	}
 #endif
 	
@@ -45,19 +53,19 @@ SDL_Shader* SDL_createShader( SDL_Renderer *renderer, const char* name ) {
 
 #ifdef SDL_SHADER_OPENGLES2
 	if( strcmp( renderer->info.name, "opengles2" )==0 ) {
-		shader = SDL_GLES2_createShader( renderer, name );
+		shader = SDL_GLES2_createShader( renderer, shdstream );
 	}
 #endif
 
 #ifdef SDL_SHADER_D3D
 	if( strcmp( renderer->info.name, "direct3d" )==0 ) {
-		shader = SDL_D3D_createShader( renderer, name );
+		shader = SDL_D3D_createShader( renderer, shdstream );
 	}
 #endif
 
 #ifdef SDL_SHADER_D3D11
 	if( strcmp( renderer->info.name, "direct3d11" )==0 ) {
-		shader = SDL_D3D11_createShader( renderer, name );
+		shader = SDL_D3D11_createShader( renderer, shdstream );
 	}
 #endif
 
@@ -65,12 +73,10 @@ SDL_Shader* SDL_createShader( SDL_Renderer *renderer, const char* name ) {
 
 }
 
-
 void SDL_hint( sdl_shader_hint flag, void* value ){
 #ifdef SDL_SHADER_OPENGL
 	SDL_GL_hint( flag, value );
 #endif
-
 #ifdef SDL_SHADER_OPENGLES2
 	SDL_GLES2_hint( flag, value );
 #endif
@@ -82,11 +88,95 @@ void SDL_hint( sdl_shader_hint flag, void* value ){
 #endif
 }
 
+SDL_ShaderFileNames SDL_getShaderFileNames( SDL_Renderer* renderer,
+	const char* name )
+{
+
+	char* vshd_ext;
+	char* pshd_ext;
+	int vshd_ext_len;
+	int pshd_ext_len;
+#ifdef SDL_SHADER_OPENGL
+	char vshd_ext_gl[] = ".gl.vert";
+	char pshd_ext_gl[] = ".gl.frag";
+	if( strcmp( renderer->info.name, "opengl" )==0 ) {
+		vshd_ext_len = sizeof( vshd_ext_gl );
+		vshd_ext = vshd_ext_gl;
+		pshd_ext_len = sizeof( pshd_ext_gl );
+		pshd_ext = pshd_ext_gl;
+	}
+#endif 
+#ifdef SDL_SHADER_OPENGLES2
+	char vshd_ext_gles2[] = ".gles2.vert";
+	char pshd_ext_gles2[] = ".gles2.frag";
+	if( strcmp( renderer->info.name, "opengles2" )==0 ) {
+		vshd_ext_len = sizeof( vshd_ext_gles2 );
+		vshd_ext = vshd_ext_gles2;
+		pshd_ext_len = sizeof( pshd_ext_gles2 );
+		pshd_ext = pshd_ext_gles2;
+	}
+#endif
+#ifdef SDL_SHADER_D3D
+	char both_shd_ext_d3d[] = ".d3d.hlsl"; /* HLSL uses a single file */
+	if( strcmp( renderer->info.name, "direct3d" )==0 ) {
+		vshd_ext_len = sizeof( both_shd_ext_d3d );
+		vshd_ext = both_shd_ext_d3d;
+		pshd_ext_len = 0;
+		pshd_ext = NULL;
+	}
+#endif
+#ifdef SDL_SHADER_D3D11
+	
+#endif
+
+	SDL_ShaderFileNames ret = {NULL,NULL};
+	int name_len = strlen( name );
+
+	ret.vshader = malloc(name_len + vshd_ext_len + 1 );
+	if( !ret.vshader ){
+		SDL_OutOfMemory();
+		return ret;
+	}
+	if( pshd_ext ) {
+		ret.pshader = malloc(name_len + pshd_ext_len + 1 );
+		if( !ret.pshader ){
+			free( ret.vshader );
+			ret.vshader = NULL;
+			SDL_OutOfMemory();
+			return ret;
+		}
+	}
+	ret.vshader[ name_len + vshd_ext_len ] = '\0';
+	strncpy( ret.vshader, name, name_len );
+	strncpy( ret.vshader + name_len, vshd_ext, vshd_ext_len );
+
+	if( pshd_ext ){
+		ret.pshader[ name_len + pshd_ext_len ] = '\0';
+		strncpy( ret.pshader, name, name_len );
+		strncpy( ret.pshader + name_len, pshd_ext, pshd_ext_len );
+	}
+
+	return ret;
+}
+
+SDL_ShaderStream SDL_getShaderStream( SDL_ShaderFileNames* names, int delete ){
+	SDL_ShaderStream ret;
+	ret.vshader = SDL_RWFromFile( names->vshader, "rb" );
+	ret.pshader = SDL_RWFromFile( names->pshader, "rb" );
+	if( delete ){
+		if( names->vshader ) {
+			free( names->vshader);
+		}
+		if( names->pshader ) {
+			free( names->pshader);
+		}
+	}
+	return ret;
+}
 
 int SDL_destroyShader( SDL_Shader* shader ){
 	return shader->destroyShader( shader );
 }
-
 
 int SDL_bindShader( SDL_Shader* shader ){
 	return shader->bindShader( shader );
@@ -139,36 +229,28 @@ int SDL_renderCopyShd( SDL_Shader* shader, SDL_Texture* texture,
 	return shader->renderCopyShd( shader, texture, &real_srcrect, &real_dstrect );
 }
 
-
-char* textFileRead(const char* path) {
-	FILE* f = fopen(path,"rb");
-	if( f==NULL ) {
-		return NULL;
-	}
-	fseek(f, 0, SEEK_END);
-	long fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
-
+char* SDL_Shader_readRW( SDL_RWops* rwop ) {
+	Sint64 fsize = rwop->size(rwop);
 	char *string = malloc(fsize + 1);
-	fread(string, fsize, 1, f);
-	fclose(f);
+	if( !string ){
+		return string;
+	}
 
-	string[fsize] = 0;
+	rwop->read(rwop, string, fsize, 1);
+	string[fsize] = '\0';
+
 	return string;
 }
 
 SDL_Uniform* SDL_createUniform( SDL_Shader* shader, const char* name ) {
 	return shader->createUniform( shader, name );
 }
-
 int SDL_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform ) {
 	return shader->destroyUniform( shader, uniform );
 }
-
 int SDL_setUniform_fv( SDL_Uniform* uniform, float* vector, int num ) {
 	return uniform->setUniform_fv( uniform, vector, num );
 }
-
 int SDL_setUniform_iv( SDL_Uniform* uniform, int*   vector, int num ) {
 	return uniform->setUniform_iv( uniform, vector, num );
 }
