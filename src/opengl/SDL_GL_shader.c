@@ -24,8 +24,40 @@
 #include <stdio.h>
 #ifdef _WIN32
 #include <SDL2/SDL_opengl.h>
-//#define GLEW_STATIC
-//#include <GL/glew.h>
+#include <GL/glext.h>
+
+#define SDL_PROC(ret,func,params) typedef ret (APIENTRY * func##_type) params; func##_type func;
+SDL_PROC(void, glUniform1f, (GLint, GLfloat) )
+SDL_PROC(void, glUniform2f, (GLint, GLfloat, GLfloat) )
+SDL_PROC(void, glUniform3f, (GLint, GLfloat, GLfloat, GLfloat) )
+SDL_PROC(void, glUniform4f, (GLint, GLfloat, GLfloat, GLfloat, GLfloat) )
+SDL_PROC(void, glUniform1fv, (GLint, GLsizei, const GLfloat*) )
+
+SDL_PROC(void, glUniform1i, (GLint, GLint) )
+SDL_PROC(void, glUniform2i, (GLint, GLint, GLint) )
+SDL_PROC(void, glUniform3i, (GLint, GLint, GLint, GLint) )
+SDL_PROC(void, glUniform4i, (GLint, GLint, GLint, GLint, GLint) )
+SDL_PROC(void, glUniform1iv, (GLint, GLsizei, const GLint*) )
+SDL_PROC(void, glGetShaderiv, (GLuint, GLenum,  GLint*) )
+SDL_PROC(void, glGetProgramiv, (GLuint,  GLenum, GLint*) )
+SDL_PROC(GLuint, glCreateShader, (GLenum) )
+SDL_PROC(void, glShaderSource, (GLuint, GLsizei, const GLchar* const*,  const GLint*) )
+SDL_PROC(void, glCompileShader, (GLuint) )
+SDL_PROC(void, glGetShaderInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*) )
+SDL_PROC(void, glBindAttribLocation, (GLuint, GLuint, const GLchar*) )
+SDL_PROC(GLuint, glCreateProgram, (void) )
+SDL_PROC(void, glAttachShader, (GLuint, GLuint) )
+SDL_PROC(void, glLinkProgram, (GLuint) )
+SDL_PROC(void, glGetProgramInfoLog, (GLuint, GLsizei, GLsizei*, GLchar*) )
+SDL_PROC(void, glDeleteShader, (GLuint) )
+SDL_PROC(void, glEnableVertexAttribArray, (GLuint) )
+SDL_PROC(void, glVertexAttribPointer, (GLuint, GLint, GLenum, GLboolean, GLsizei, const GLvoid* ) )
+SDL_PROC(void, glUniformMatrix4fv, (GLint, GLsizei, GLboolean, const GLfloat*) )
+SDL_PROC(GLint, glGetUniformLocation, (GLuint, const GLchar*) )
+SDL_PROC(void, glUseProgram, (GLuint) )
+#undef SDL_PROC
+
+#undef GL_GLEXT_PROTOTYPES
 #endif
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -173,6 +205,38 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, const char *name){
 	shader->destroyUniform = SDL_GL_destroyUniform;
 
 	shader_data->p = 0;
+
+#ifdef _WIN32
+	glUniform1f = (glUniform1f_type) SDL_GL_GetProcAddress("glUniform1f");
+	glUniform2f = (glUniform2f_type) SDL_GL_GetProcAddress("glUniform2f");
+	glUniform3f = (glUniform3f_type) SDL_GL_GetProcAddress("glUniform3f");
+	glUniform4f = (glUniform4f_type) SDL_GL_GetProcAddress("glUniform4f");
+	glUniform1fv = (glUniform1fv_type) SDL_GL_GetProcAddress("glUniform1fv");
+
+	glUniform1i = (glUniform1i_type) SDL_GL_GetProcAddress("glUniform1i");
+	glUniform2i = (glUniform2i_type) SDL_GL_GetProcAddress("glUniform2i");
+	glUniform3i = (glUniform3i_type) SDL_GL_GetProcAddress("glUniform3i");
+	glUniform4i = (glUniform4i_type) SDL_GL_GetProcAddress("glUniform4i");
+	glUniform1iv = (glUniform1iv_type) SDL_GL_GetProcAddress("glUniform1iv");
+	glGetShaderiv = (glGetShaderiv_type) SDL_GL_GetProcAddress("glGetShaderiv");
+	glGetProgramiv = (glGetProgramiv_type) SDL_GL_GetProcAddress("glGetProgramiv");
+	glCreateShader = (glCreateShader_type) SDL_GL_GetProcAddress("glCreateShader");
+	glShaderSource = (glShaderSource_type) SDL_GL_GetProcAddress("glShaderSource");
+	glCompileShader = (glCompileShader_type) SDL_GL_GetProcAddress("glCompileShader");
+	glGetShaderInfoLog = (glGetShaderInfoLog_type) SDL_GL_GetProcAddress("glGetShaderInfoLog");
+	glBindAttribLocation = (glBindAttribLocation_type) SDL_GL_GetProcAddress("glBindAttribLocation");
+	glCreateProgram = (glCreateProgram_type) SDL_GL_GetProcAddress("glCreateProgram");
+	glAttachShader = (glAttachShader_type) SDL_GL_GetProcAddress("glAttachShader");
+	glLinkProgram = (glLinkProgram_type) SDL_GL_GetProcAddress("glLinkProgram");
+	glGetProgramInfoLog = (glGetProgramInfoLog_type) SDL_GL_GetProcAddress("glGetProgramInfoLog");
+	glDeleteShader = (glDeleteShader_type) SDL_GL_GetProcAddress("glDeleteShader");
+	glEnableVertexAttribArray = (glEnableVertexAttribArray_type) SDL_GL_GetProcAddress("glEnableVertexAttribArray");
+	glVertexAttribPointer = (glVertexAttribPointer_type) SDL_GL_GetProcAddress("glVertexAttribPointer");
+	glUniformMatrix4fv = (glUniformMatrix4fv_type) SDL_GL_GetProcAddress("glUniformMatrix4fv");
+	glGetUniformLocation = (glGetUniformLocation_type) SDL_GL_GetProcAddress("glGetUniformLocation");
+	glUseProgram = (glUseProgram_type) SDL_GL_GetProcAddress("glUseProgram");
+#endif
+
 	v = glCreateShader( GL_VERTEX_SHADER );
 	f = glCreateShader( GL_FRAGMENT_SHADER );
 	shader_data->color = NULL;
@@ -351,6 +415,7 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
         return SDL_SetError("SDL_Shader: OpenGL YUV-textures not supported");
     }
 
+
 	SDL_GL_MakeCurrent(shader->renderer->window, data->context);
 	SDL_GL_BindTexture(texture, &width, &height );
 
@@ -373,24 +438,25 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
 
     data->current.shader = SHADER_NONE;
     if (texture->blendMode != data->current.blendMode) {
+
 		switch (texture->blendMode) {
 			case SDL_BLENDMODE_NONE:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-				data->glDisable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+				glDisable(GL_BLEND);
 				break;
 			case SDL_BLENDMODE_BLEND:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
 				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 				break;
 			case SDL_BLENDMODE_ADD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
 				data->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ZERO, GL_ONE);
 				break;
 			case SDL_BLENDMODE_MOD:
-				data->glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-				data->glEnable(GL_BLEND);
+				glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+				glEnable(GL_BLEND);
 				data->glBlendFuncSeparate(GL_ZERO, GL_SRC_COLOR, GL_ZERO, GL_ONE);
 				break;
 		}

@@ -85,8 +85,8 @@ This is the stuff which needs to be done for a beta release.
  * SDL_renderCopyShdArray (for rendering an array of triangles and textures)
  * SDL_createShader interface change -> take a buffer instead of name
  * SDL_getShaderBuffer -> create a buffer from name
+ * Reserve window events to restore view-projection matrix
  * Doxygen-documentation
- * Fix OpenGL-backend for windows
  * Testcase for SDL_renderCopyShdArray
  * Testcase for SDL_uniform* functions
  * integrate a testing framework

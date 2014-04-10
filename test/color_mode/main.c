@@ -236,6 +236,7 @@ int main(int argc, char** argv)
 	SDL_SetRenderDrawColor(renderer, 0,0,0,1);
 	int ret = 0;
 	int quit = 0;
+
 	while ( !quit ) {
 		SDLTest_DrawString( renderer,   8,   8, blendNames[current_blend] );
 		SDLTest_DrawString( renderer, 108,   8, colorNames[current_color] );
