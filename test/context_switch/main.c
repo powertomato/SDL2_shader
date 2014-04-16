@@ -50,14 +50,14 @@ int main(int argc, char** argv)
 
 	SDL_SetHint( SDL_HINT_RENDER_DRIVER, getenv("RENDER_DRIVER") ); 
 
-	int width = 250;
-	int height = 400;
+	int width = 800;
+	int height = 600;
 	screen = SDL_CreateWindow("Caption",
 			SDL_WINDOWPOS_CENTERED,
 			SDL_WINDOWPOS_CENTERED,
 			width, height,
-			SDL_WINDOW_RESIZABLE);
-			// SDL_WINDOW_FULLSCREEN_DESKTOP );
+			 //SDL_WINDOW_RESIZABLE);
+			 SDL_WINDOW_FULLSCREEN_DESKTOP );
 	if ( screen == NULL ) {
 		fprintf(stderr, "Error: %s \n", SDL_GetError());
 		return 2;
@@ -180,6 +180,8 @@ int main(int argc, char** argv)
 						break;
 				}
 				break;
+			//case SDL_WINDOWEVENT:
+				//SDL_updateViewport( shader );
 			}
 		}
 

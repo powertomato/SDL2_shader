@@ -6,16 +6,20 @@
 #include <SDL2/SDL_image.h>
 #include "../src/SDL_shader.h"
 #include "../src/SDL_SYS_RenderStructs.h"
+#include <math.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif /*M_PI*/
 
 
-static char *shader_names[] = {
+/*static char *shader_names[] = {
 	"do_nothing",
 	"greyscale",
 	"sepia",
 };
 static SDL_Shader** shaders;
 static int current_shader;
-#define NUM_OF_SHADERS (sizeof(shader_names)/sizeof(char*))
+#define NUM_OF_SHADERS (sizeof(shader_names)/sizeof(char*))*/
 
 int mod(int a, int b)
 {
@@ -78,33 +82,49 @@ int main(int argc, char** argv)
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderClear(renderer);
 
-	shaders = (SDL_Shader**) malloc( sizeof(SDL_Shader*)*NUM_OF_SHADERS );
-	int i;
-	for ( i=0; i<NUM_OF_SHADERS; i++) {
-		SDL_Shader *shader;
-		char buff_name[2048] = {0};
-		strncat( buff_name, "../shaders/", 2048 );
-		strncat( buff_name, shader_names[i], 2048 );
-		strncat( buff_name, "/", 2048 );
-		strncat( buff_name, shader_names[i], 2048 );
-		printf("loading shader #%i %s\n", i, buff_name );
-		shader = SDL_createShader( renderer, buff_name );
-		if ( shader == NULL ){
-			fprintf(stderr, "Error: %s \n", SDL_GetError());
-			return 4;
-		}
-		shaders[i] = shader;
+//            a5
+//          ,-'\,
+//   a4 ,-''     \,
+//     |           \,
+//     |     +- - - :-a3
+//     |           /'
+//   a2'-.       /'
+//        `'--./'
+//            a1
+
+	SDL_shader_hint(SDL_GL_TEX0_NAME,"color_map" );
+	SDL_shader_hint(SDL_GL_TEX1_NAME,"color_map2" );
+	SDL_Shader* shader = SDL_createShader( renderer, "../shaders/multitex/multitex" );
+	SDL_Vertex *vertices = shader->createVertexBuffer( 5 );
+	float angles[] = { 2*M_PI/5*4, 2*M_PI/5*3, 0, 2*M_PI/5*2, 2*M_PI/5*1 };
+	for ( int i=0; i<5; i++ ){
+		vertices->setVertexColor( vertices,i,1,255,255,255,255 );
+		vertices->setVertexPosition( vertices,i,1,
+				150*cos(angles[i])+250, 150*sin(angles[i])+200,0.0f );
+		vertices->setVertexTexCoord( vertices,i,1,
+				(cos(angles[i])/2+0.5), (sin(angles[i])/2+0.5) );
 	}
 
-	SDL_Texture* tex;
+	SDL_Texture* tex[2];
 	SDL_Surface* srf;
-	srf = IMG_Load( "../all.png" );
-	if ( !srf ) {
-		fprintf(stderr, "Error: %s \n", SDL_GetError());
-		return 5;
+	char* names[] = {"../img.png", "../img2.png"};
+	for( int i=0; i<2; i++ ){
+		srf = IMG_Load( names[i] );
+
+		SDL_PixelFormat* fmt = SDL_AllocFormat( SDL_PIXELFORMAT_ARGB8888 );
+			SDL_assert(fmt != NULL);
+		SDL_Surface* srf2 = SDL_ConvertSurface(srf, fmt, 0);
+			SDL_assert(srf2 != NULL);
+
+		if ( !srf ) {
+			fprintf(stderr, "Error: %s \n", SDL_GetError());
+			return 5;
+		}
+		tex[i] = SDL_CreateTextureFromSurface(renderer, srf2 );
+
+		SDL_FreeSurface(srf);
+		SDL_FreeSurface( srf2 );
 	}
-	tex = SDL_CreateTextureFromSurface(renderer, srf );
-	SDL_FreeSurface(srf);
 
 	SDL_SetRenderTarget( renderer, NULL );
 	SDL_Event e;
@@ -112,9 +132,8 @@ int main(int argc, char** argv)
 	int ret = 0;
 	int quit = 0;
 	while ( !quit ) {
-		SDLTest_DrawString( renderer,   8,   8, shader_names[current_shader] );
-		SDL_Rect dst = { 50, 50, tex->w, tex->h };
-		ret = SDL_renderCopyShd( shaders[current_shader], tex, NULL, &dst );
+		//SDLTest_DrawString( renderer,   8,   8, shader_names[current_shader] );
+		ret = SDL_renderVertexBuffer( shader, vertices, tex, 2 );
 		if ( ret!=0 ){
 			fprintf(stderr,"Err: %s\n", SDL_GetError());
 		}
@@ -127,17 +146,13 @@ int main(int argc, char** argv)
 			case SDL_KEYDOWN: 
 				switch ( e.key.keysym.sym ) {
 					case SDLK_SPACE:
-						current_shader= mod( (current_shader-1), (NUM_OF_SHADERS));
 						break;
 					case SDLK_TAB:
-						current_shader= mod( (current_shader+1), (NUM_OF_SHADERS));
 						break;
 				}
 				break;
-			case SDL_WINDOWEVENT:
-				for( int i=0; i<NUM_OF_SHADERS; i++ ){
-					SDL_updateViewport( shaders[i] );
-				}
+			//case SDL_WINDOWEVENT:
+			//	SDL_updateViewport( shader );
 			}
 		}
 
@@ -148,13 +163,11 @@ int main(int argc, char** argv)
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	}
-	for( i=0; i<NUM_OF_SHADERS; i++ ){
-		SDL_destroyShader( shaders[i] );
-	}
-	SDL_DestroyTexture( tex );
+	SDL_destroyShader( shader );
+	SDL_DestroyTexture( tex[0] );
+	SDL_DestroyTexture( tex[1] );
 	SDL_DestroyRenderer( renderer );
 	SDL_DestroyWindow( screen );
 	SDL_Quit();
-	free(shaders);
 	return 0;
 }

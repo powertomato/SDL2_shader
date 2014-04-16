@@ -56,6 +56,83 @@ typedef struct {
 	D3DXHANDLE handle;
 } SDL_D3D_UniformData;
 
+typedef Vertex SDL_D3D_Vertex_t;
+
+void SDL_D3D_getVertex( SDL_Vertex* vertices, unsigned num,
+	uint8_t *r, uint8_t *g, uint8_t *b, uint8_t *a,
+	float *x, float *y, float *z,
+	float *tex_s, float *tex_t )
+{
+	SDL_D3D_Vertex_t* vbuff = (SDL_D3D_Vertex_t*) vertices->vertexBuffer;
+	DWORD color = vbuff[num].color;
+	if( a ) (*a) = (uint8_t) ((color & 0xFF000000)>>24);
+	if( r ) (*r) = (uint8_t) ((color & 0x00FF0000)>>16);
+	if( g ) (*g) = (uint8_t) ((color & 0x0000FF00)>> 8);
+	if( b ) (*b) = (uint8_t) (color & 0x000000FF);
+
+	if( x ) (*x) = (vbuff[num].x );
+	if( y ) (*y) = (vbuff[num].y );
+	if( z ) (*z) = (vbuff[num].z );
+
+	if( tex_s ) (*tex_s) = (vbuff[num].u );
+	if( tex_t ) (*tex_t) = (vbuff[num].v );
+}
+
+void SDL_D3D_setVertexColor(SDL_Vertex* vertices, unsigned from, unsigned num,
+	uint8_t r, uint8_t g, uint8_t b, uint8_t a )
+{
+	SDL_D3D_Vertex_t* vbuff = (SDL_D3D_Vertex_t*) vertices->vertexBuffer;
+	unsigned i;
+	for ( i=from; i<from+num; i++ ) {
+		vbuff[i].color = D3DCOLOR_ARGB( a,r,g,b );
+	}
+}
+void SDL_D3D_setVertexPosition(SDL_Vertex* vertices, unsigned from,
+	unsigned num, float x, float y, float z )
+{
+	SDL_D3D_Vertex_t* vbuff = (SDL_D3D_Vertex_t*) vertices->vertexBuffer;
+	unsigned i;
+	for ( i=from; i<from+num; i++ ) {
+		vbuff[i].x = x;
+		vbuff[i].y = y;
+		vbuff[i].z = z;
+	}
+}
+void SDL_D3D_setVertexTexCoord(SDL_Vertex* vertices, unsigned from,
+	unsigned num, float s, float t )
+{
+	SDL_D3D_Vertex_t* vbuff = (SDL_D3D_Vertex_t*) vertices->vertexBuffer;
+	unsigned i;
+	for ( i=from; i<from+num; i++ ) {
+		vbuff[i].u = s;
+		vbuff[i].v = t;
+	}
+}
+SDL_Vertex* SDL_D3D_createVertexBuffer( unsigned size ) {
+	SDL_Vertex* ret = (SDL_Vertex*) malloc( sizeof(SDL_Vertex) );
+	if ( !ret ) {
+		SDL_OutOfMemory();
+		return NULL;
+	}
+	ret->vertexBuffer = malloc( sizeof(SDL_D3D_Vertex_t)*size );
+	if ( !ret->vertexBuffer ) {
+		free( ret );
+		SDL_OutOfMemory();
+		return NULL;
+	}
+	ret->size = size;
+	ret->getVertex = SDL_D3D_getVertex;
+	ret->setVertexColor = SDL_D3D_setVertexColor;
+	ret->setVertexPosition = SDL_D3D_setVertexPosition;
+	ret->setVertexTexCoord = SDL_D3D_setVertexTexCoord;
+	return ret;
+}
+int SDL_D3D_destroyVertexBuffer( SDL_Vertex* buff ) {
+	free( buff->vertexBuffer );
+	free( buff );
+	return 0;
+}
+
 static int vs_version_major = 1;
 static int vs_version_minor = 1;
 static int ps_version_major = 2;
@@ -89,18 +166,18 @@ static int SDL_D3D_setUniform_matrix( SDL_Uniform* uniform, D3DXMATRIX* matix );
 static void SDL_D3D_updateViewport( SDL_Shader* shader ) {
 	SDL_Renderer* renderer = shader->renderer;
 	SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
-	if( renderer->viewport.w && 
-		renderer->viewport.h && 
-		shader_data->vport )
+	int w,h;
+	SDL_RenderGetLogicalSize( renderer, &w, &h );
+    if ( w && h && shader_data->vport )
 	{
 	    D3DXMATRIX matrix;
-		matrix.m[0][0] = 2.0f / renderer->viewport.w;
+		matrix.m[0][0] = 2.0f / w;
 		matrix.m[1][0] = 0.0f;
 		matrix.m[2][0] = 0.0f;
 		matrix.m[3][0] = 0.0f;
 
 		matrix.m[0][1] = 0.0f;
-		matrix.m[1][1] =-2.0f / renderer->viewport.h;
+		matrix.m[1][1] =-2.0f / h;
 		matrix.m[2][1] = 0.0f;
 		matrix.m[3][1] = 0.0f;
 
@@ -145,9 +222,13 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
 	shader->bindShader =     SDL_D3D_bindShader;
 	shader->unbindShader =   SDL_D3D_unbindShader;
 	shader->renderCopyShd =  SDL_D3D_renderCopyShd;
+	shader->updateViewport = SDL_D3D_updateViewport;
 
 	shader->createUniform  = SDL_D3D_createUniform;
 	shader->destroyUniform = SDL_D3D_destroyUniform;
+
+	shader->createVertexBuffer = SDL_D3D_createVertexBuffer;
+	shader->destroyVertexBuffer = SDL_D3D_destroyVertexBuffer;
 
 	HRESULT result;
 
@@ -169,7 +250,7 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
 		SAFE_RELEASE( error );
 		return NULL;
 	}
-	result = IDirect3DDevice9_CreateVertexShader(render_data->device, 
+	result = IDirect3DDevice9_CreateVertexShader(render_data->device,
 		(DWORD*) ID3DXBuffer_GetBufferPointer( code ), &shader_data->vert_shader);
 	SAFE_RELEASE( code );
 	SAFE_RELEASE( error );
@@ -255,93 +336,52 @@ int SDL_D3D_destroyShader( SDL_Shader* shader ) {
 	return 0;
 }
 
-int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture_sdl,
-		const SDL_Rect * srcrect, const SDL_Rect * dstrect_i) {
+int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture** textures,
+		unsigned num_of_tex, SDL_Vertex* vertices, unsigned num_of_vert)
+{
 
-	SDL_Renderer* renderer = shader->renderer;
-	D3D_RenderData *data = (D3D_RenderData *) renderer->driverdata;
+	SDL_Renderer* renderer;
+	D3D_RenderData *data;
 	D3D_TextureData *texturedata;
-	//SDL_D3D_ShaderData *shader_data = (SDL_D3D_ShaderData*) shader->driver_data;
-	SDL_FRect dstrect = {dstrect_i->x, dstrect_i->y, dstrect_i->w, dstrect_i->h };
-
-
-	float minx, miny, maxx, maxy;
-	float minu, maxu, minv, maxv;
-	DWORD color;
-	Vertex vertices[4];
+	int i;
 	HRESULT result;
+
+
+	renderer = shader->renderer;
+	data = (D3D_RenderData *) renderer->driverdata;
 
 	if (D3D_ActivateRenderer(renderer) < 0) {
 		return -1;
 	}
 
-	texturedata = (D3D_TextureData *)texture_sdl->driverdata;
-	if (!texturedata) {
-		SDL_SetError("SDL_Shader: D3D Texture is not currently available");
-		return -1;
+	for ( i=0; i<num_of_tex; i++ ) {
+		texturedata = textures[i]->driverdata;
+		if (!texturedata) {
+			return SDL_SetError("SDL_Shader: D3D Texture is not currently available");
+		}
+		if (texturedata->yuv) {
+			return SDL_SetError("SDL_Shader: D3D YUV-textures not supported\n");
+		}
+
+		result = IDirect3DDevice9_SetTexture(data->device, i,
+			(IDirect3DBaseTexture9 *) texturedata->texture);
+		if (FAILED(result)) {
+			return SDL_SetError("SDL_Shader: D3D SetTexture() failed, errno %d\n", result);
+		}
 	}
 
-	minx = dstrect.x - 0.5f;
-	miny = dstrect.y - 0.5f;
-	maxx = dstrect.x + dstrect.w - 0.5f;
-	maxy = dstrect.y + dstrect.h - 0.5f;
-
-	minu = (float) srcrect->x / texture_sdl->w;
-	maxu = (float) (srcrect->x + srcrect->w) / texture_sdl->w;
-	minv = (float) srcrect->y / texture_sdl->h;
-	maxv = (float) (srcrect->y + srcrect->h) / texture_sdl->h;
-
-	color = D3DCOLOR_ARGB(texture_sdl->a, texture_sdl->r, texture_sdl->g, texture_sdl->b);
-
-	vertices[0].x = minx;
-	vertices[0].y = miny;
-	vertices[0].z = 0.0f;
-	vertices[0].color = color;
-	vertices[0].u = minu;
-	vertices[0].v = minv;
-
-	vertices[1].x = maxx;
-	vertices[1].y = miny;
-	vertices[1].z = 0.0f;
-	vertices[1].color = color;
-	vertices[1].u = maxu;
-	vertices[1].v = minv;
-
-	vertices[2].x = maxx;
-	vertices[2].y = maxy;
-	vertices[2].z = 0.0f;
-	vertices[2].color = color;
-	vertices[2].u = maxu;
-	vertices[2].v = maxv;
-
-	vertices[3].x = minx;
-	vertices[3].y = maxy;
-	vertices[3].z = 0.0f;
-	vertices[3].color = color;
-	vertices[3].u = minu;
-	vertices[3].v = maxv;
-
-	D3D_SetBlendMode(data, texture_sdl->blendMode);
-
+	D3D_SetBlendMode(data, textures[0]->blendMode);
 	D3D_UpdateTextureScaleMode(data, texturedata, 0);
 
-	result =
-		IDirect3DDevice9_SetTexture(data->device, 0, (IDirect3DBaseTexture9 *)
-				texturedata->texture);
-	if (FAILED(result)) {
-		return SDL_SetError("SDL_Shader: D3D SetTexture() failed, errno %d\n", result);
-	}
-
-	if (texturedata->yuv) {
-		return SDL_SetError("SDL_Shader: D3D YUV-textures not supported\n");
-	}
-	
 	int r = shader->bindShader(shader);
 	if ( r ) return r;
-	result = IDirect3DDevice9_DrawPrimitiveUP(data->device, D3DPT_TRIANGLEFAN, 2,
-			vertices, sizeof(*vertices));
+
+	SDL_D3D_Vertex_t *vbuff = (SDL_D3D_Vertex_t*) vertices->vertexBuffer;
+	result = IDirect3DDevice9_DrawPrimitiveUP(data->device, D3DPT_TRIANGLESTRIP,
+		num_of_vert-2, vbuff, sizeof(Vertex));
 	if (FAILED(result)) {
-		return SDL_SetError("SDL_Shader: D3D DrawPrimitiveUP() failed, errno %d\n", result);
+		return SDL_SetError("SDL_Shader: D3D DrawPrimitiveUP() "
+			"failed, errno %d\n", result);
 	}
 	r = shader->unbindShader(shader);
 	if ( r ) return r;

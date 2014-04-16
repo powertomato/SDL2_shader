@@ -13,14 +13,13 @@ varying vec2 texCoord_out;
 
 vec4 convertColor(int type, vec4 color);
 uniform int color_mode;
-uniform vec4 color;
 
 uniform sampler2D colorMap;
 
 void main(void){
 	vec4 texcol = texture2D(colorMap, texCoord_out.st); 
 	texcol = convertColor(color_mode, texcol);
-	texcol = texcol * color;
+	texcol = texcol * col_out;
 
 	float grey = 0.2126 *texcol.r + 0.7152 *texcol.g + 0.0722 *texcol.b;
 	gl_FragColor = vec4(grey,grey,grey,texcol.a);

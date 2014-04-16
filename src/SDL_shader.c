@@ -73,7 +73,7 @@ SDL_Shader* SDL_createShader_RW( SDL_Renderer *renderer,
 
 }
 
-void SDL_hint( sdl_shader_hint flag, void* value ){
+void SDL_shader_hint( sdl_shader_hint flag, void* value ){
 #ifdef SDL_SHADER_OPENGL
 	SDL_GL_hint( flag, value );
 #endif
@@ -181,52 +181,121 @@ int SDL_destroyShader( SDL_Shader* shader ){
 int SDL_bindShader( SDL_Shader* shader ){
 	return shader->bindShader( shader );
 }
+void SDL_updateViewport( SDL_Shader *shader ){
+	shader->updateViewport( shader );
+}
+int SDL_renderVertexBuffer( SDL_Shader* shader, SDL_Vertex *vertices,
+		SDL_Texture** textures, unsigned num_of_tex)
+{
+	unsigned i;
+	SDL_Renderer* renderer = shader->renderer;
 
-int SDL_renderCopyShd( SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_Rect * dstrect){
+	if ( num_of_tex==0 )
+		return 0;
+	if ( num_of_tex >= 8 )
+		return SDL_SetError("SDL_Shader: only 8 textures are supported");
+	for ( i=0; i<num_of_tex; i++ ) {
+		if (( textures[i]->w != textures[0]->w ||
+			  textures[i]->h != textures[0]->h ) && i!=0 )
+		{
+			return SDL_SetError("SDL_Shader: Textures must have the same size");
+		}
+		if (( textures[i]->format != textures[0]->format) && i!=0 ) {
+			return SDL_SetError("SDL_Shader: Textures must have the same format");
+		}
+		if (renderer != textures[i]->renderer) {
+			return SDL_SetError("SDL_Shader: Texture was not created with this renderer");
+		}
+	}
+
+	return shader->renderCopyShd( shader, textures, num_of_tex, 
+		vertices, vertices->size );
+}
+
+int SDL_renderCopyShdArray( SDL_Shader* shader, SDL_Texture** textures,
+		const SDL_Rect * srcrect, const SDL_Rect * dstrect, unsigned num_of_tex)
+{
 
 	SDL_Renderer *renderer = shader->renderer;
+
+    if (renderer->hidden) {
+		return 0;
+	}
+
     SDL_Rect real_srcrect = { 0, 0, 0, 0 };
     SDL_Rect real_dstrect = { 0, 0, 0, 0 };
-
-    if (renderer != texture->renderer) {
-        return SDL_SetError("Texture was not created with this renderer");
-    }
+	unsigned i;
 
     real_srcrect.x = 0;
     real_srcrect.y = 0;
-    real_srcrect.w = texture->w;
-    real_srcrect.h = texture->h;
+    real_srcrect.w = textures[0]->w;
+    real_srcrect.h = textures[0]->h;
     if (srcrect) {
         if (!SDL_IntersectRect(srcrect, &real_srcrect, &real_srcrect)) {
             return 0;
         }
     }
 
-    SDL_RenderGetViewport(renderer, &real_dstrect);
-    real_dstrect.x = 0;
-    real_dstrect.y = 0;
+	//XXX bug here
+    //SDL_RenderGetViewport(renderer, &real_dstrect);
     if (dstrect) {
-        if (!SDL_HasIntersection(dstrect, &real_dstrect)) {
+        /*if (!SDL_HasIntersection(dstrect, &real_dstrect)) {
             return 0;
-        }
+        }*/
         real_dstrect = *dstrect;
     }
 
-    if (texture->native) {
-        texture = texture->native;
-    }
+	for( i=0; i<num_of_tex; i++ ) {
+		if (textures[i]->native) {
+			textures[i] = textures[i]->native;
+		}
+	}
 
-    if (renderer->hidden) {
-        return 0;
-    }
-
-    real_dstrect.x *= renderer->scale.x;
+    /*real_dstrect.x *= renderer->scale.x;
     real_dstrect.y *= renderer->scale.y;
     real_dstrect.w *= renderer->scale.x;
-    real_dstrect.h *= renderer->scale.y;
+    real_dstrect.h *= renderer->scale.y;*/
 
-	return shader->renderCopyShd( shader, texture, &real_srcrect, &real_dstrect );
+	SDL_Vertex* vertices = shader->createVertexBuffer(4);
+
+	int r,g,b,a;
+	r = textures[0]->r;
+	g = textures[0]->g;
+	b = textures[0]->b;
+	a = textures[0]->a;
+	vertices->setVertexColor( vertices, 0,4, r,g,b,a);
+
+	vertices->setVertexPosition( vertices, 0,1,
+		real_dstrect.x, real_dstrect.y, 0.0f);
+	vertices->setVertexPosition( vertices, 1,1,
+		(real_dstrect.x + real_dstrect.w), real_dstrect.y, 0.0f);
+	vertices->setVertexPosition( vertices, 2,1,
+		real_dstrect.x, (real_dstrect.y + real_dstrect.h), 0.0f);
+	vertices->setVertexPosition( vertices, 3,1,
+		(real_dstrect.x + real_dstrect.w),
+		(real_dstrect.y + real_dstrect.h), 0.0f);
+
+    float minu, maxu, minv, maxv;
+    minu = real_srcrect.x / textures[0]->w;
+    maxu = (real_srcrect.x + real_srcrect.w) / textures[0]->w;
+    minv = real_srcrect.y / textures[0]->h;
+    maxv = (real_srcrect.y + real_srcrect.h) / textures[0]->h;
+	vertices->setVertexTexCoord( vertices, 0,1, minu, minv);
+	vertices->setVertexTexCoord( vertices, 1,1, maxu, minv);
+	vertices->setVertexTexCoord( vertices, 2,1, minu, maxv);
+	vertices->setVertexTexCoord( vertices, 3,1, maxu, maxv);
+
+	int res = SDL_renderVertexBuffer( shader, vertices, textures, num_of_tex );
+	shader->destroyVertexBuffer( vertices );
+	return res;
+}
+
+
+int SDL_renderCopyShd( SDL_Shader* shader, SDL_Texture* texture,
+               const SDL_Rect * srcrect, const SDL_Rect * dstrect)
+{
+	SDL_Texture *textures[] = {texture};
+	return SDL_renderCopyShdArray( shader, textures, srcrect, dstrect, 1 );
 }
 
 char* SDL_Shader_readRW( SDL_RWops* rwop ) {

@@ -44,7 +44,8 @@ typedef enum
     GLES2_ATTRIBUTE_TEXCOORD = 1,
     GLES2_ATTRIBUTE_ANGLE = 2,
     GLES2_ATTRIBUTE_CENTER = 3,
-} GLES2_Attribute;
+    GLES2_ATTRIBUTE_COLOR = 4,
+} GLES2_Shader_Attribute;
 
 typedef enum
 {
@@ -138,3 +139,25 @@ typedef struct GLES2_DriverContext
     GLES2_ProgramCacheEntry *current_program;
     Uint8 clear_r, clear_g, clear_b, clear_a;
 } GLES2_DriverContext;
+
+#if (GL_TEXTURE0+1)!=(GL_TEXTURE1)
+#error "GL_TEXTUREx sequence static assertion"
+#endif
+#if (GL_TEXTURE0+2)!=(GL_TEXTURE2)
+#error "GL_TEXTUREx sequence static assertion"
+#endif
+#if (GL_TEXTURE0+3)!=(GL_TEXTURE3)
+#error "GL_TEXTUREx sequence static assertion"
+#endif
+#if (GL_TEXTURE0+4)!=(GL_TEXTURE4)
+#error "GL_TEXTUREx sequence static assertion"
+#endif
+#if (GL_TEXTURE0+5)!=(GL_TEXTURE5)
+#error "GL_TEXTUREx sequence static assertion"
+#endif
+#if (GL_TEXTURE0+6)!=(GL_TEXTURE6)
+#error "GL_TEXTUREx sequence static assertion"
+#endif
+#if (GL_TEXTURE0+7)!=(GL_TEXTURE7)
+#error "GL_TEXTUREx sequence static assertion"
+#endif

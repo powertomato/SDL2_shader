@@ -34,10 +34,14 @@ typedef enum {
 	SDL_D3D_PS_MAJOR_VERSION,
 	SDL_D3D_PS_MINOR_VERSION,
 
-	SDL_D3D11_VS_MAJOR_VERSION,
-	SDL_D3D11_VS_MINOR_VERSION,
-	SDL_D3D11_PS_MAJOR_VERSION,
-	SDL_D3D11_PS_MINOR_VERSION,
+	SDL_GL_TEX0_NAME,
+	SDL_GL_TEX1_NAME,
+	SDL_GL_TEX2_NAME,
+	SDL_GL_TEX3_NAME,
+	SDL_GL_TEX4_NAME,
+	SDL_GL_TEX5_NAME,
+	SDL_GL_TEX6_NAME,
+	SDL_GL_TEX7_NAME,
 } sdl_shader_hint;
 
 typedef struct {
@@ -71,6 +75,22 @@ struct SDL_Uniform_t{
 	void* driver_data;
 };
 
+typedef struct SDL_Vertex_t SDL_Vertex;
+struct SDL_Vertex_t {
+	unsigned size;
+	void* vertexBuffer;
+	void (*setVertexColor)(SDL_Vertex* vertices, unsigned from,
+			unsigned num, uint8_t r, uint8_t g, uint8_t b, uint8_t a );
+	void (*setVertexPosition)(SDL_Vertex* vertices, unsigned from,
+			unsigned num, float x, float y, float z );
+	void (*setVertexTexCoord)(SDL_Vertex* vertices, unsigned from,
+			unsigned num, float s, float t );
+	void (*getVertex)( SDL_Vertex* vertices, unsigned num,
+			uint8_t *r, uint8_t *g, uint8_t *b, uint8_t *a,
+			float *x, float *y, float *z,
+			float *tex_s, float *tex_t );
+};
+
 struct SDL_Shader_t {
 	SDL_Renderer* renderer;
 
@@ -79,19 +99,23 @@ struct SDL_Shader_t {
 	int (*bindShader)( SDL_Shader* shader );
 	int (*unbindShader)( SDL_Shader* shader );
 	int (*destroyShader)( SDL_Shader* shader );
-	int (*renderCopyShd)( SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_Rect * dstrect);
+
+	int (*renderCopyShd)(SDL_Shader* shader, SDL_Texture** textures,
+			unsigned num_of_tex, SDL_Vertex* vertices, unsigned num_of_vert);
+	void (*updateViewport)( SDL_Shader *shader );
 	
 	SDL_Uniform* (*createUniform)( SDL_Shader* shader, const char* name );
 	int (*destroyUniform)( SDL_Shader* shader, SDL_Uniform* uniform );
+
+	SDL_Vertex* (*createVertexBuffer)( unsigned size );
+	int (*destroyVertexBuffer)( SDL_Vertex* buff );
 
 	void* driver_data;
 };
 
 
 
-void SDL_hint(sdl_shader_hint flag, void* value);
-
+void SDL_shader_hint(sdl_shader_hint flag, void* value);
 
 SDL_ShaderFileNames SDL_getShaderFileNames( SDL_Renderer* renderer, 
 	const char* name );
@@ -103,7 +127,12 @@ SDL_Shader* SDL_createShader_RW( SDL_Renderer *renderer,
 int SDL_destroyShader( SDL_Shader* shader );
 int SDL_bindShader( SDL_Shader* shader );
 int SDL_renderCopyShd( SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_Rect * dstrect);
+		const SDL_Rect * srcrect, const SDL_Rect * dstrect);
+int SDL_renderCopyShdArray( SDL_Shader* shader, SDL_Texture** textures,
+		const SDL_Rect * srcrect, const SDL_Rect * dstrect, unsigned num);
+int SDL_renderVertexBuffer( SDL_Shader* shader, SDL_Vertex *vertices,
+		SDL_Texture** textures, unsigned num_of_tex);
+void SDL_updateViewport( SDL_Shader *shader );
 
 SDL_Uniform* SDL_createUniform( SDL_Shader* shader, const char* name );
 int SDL_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform );

@@ -34,9 +34,8 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer, SDL_ShaderStream* str )
 int SDL_GL_destroyShader( SDL_Shader* shader );
 int SDL_GL_bindShader( SDL_Shader* shader );
 int SDL_GL_unbindShader( SDL_Shader* shader );
-int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_Rect * dstrect);
-
+int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture** textures,
+	unsigned num_of_tex, SDL_Vertex* vertices, unsigned num_of_vert);
 
 SDL_Uniform* SDL_GL_createUniform( SDL_Shader* shader, const char* name );
 int SDL_GL_destroyUniform( SDL_Shader* shader, SDL_Uniform* uniform );

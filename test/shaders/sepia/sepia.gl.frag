@@ -8,14 +8,13 @@
 
 vec4 convertColor(int type, vec4 color);
 uniform int color_mode;
-uniform vec4 color;
 
 uniform sampler2D colorMap;
 
 void main(void){
 	vec4 texcol = texture2D(colorMap, gl_TexCoord[0].st); 
 	texcol = convertColor(color_mode,texcol);
-	texcol = texcol * color;
+	texcol = texcol * gl_Color;
 
 	/* http://www.techrepublic.com/blog/how-do-i/
 		how-do-i-convert-images-to-grayscale-and-sepia-tone-using-c/# */

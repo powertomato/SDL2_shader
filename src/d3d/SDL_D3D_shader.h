@@ -30,12 +30,12 @@ extern "C" {
 
 void SDL_D3D_hint(sdl_shader_hint flag, void* value);
 SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
-	SDL_ShaderStream* shdstream );
+		SDL_ShaderStream* shdstream );
 int SDL_D3D_destroyShader( SDL_Shader* shader );
 int SDL_D3D_bindShader( SDL_Shader* shader );
 int SDL_D3D_unbindShader( SDL_Shader* shader );
-int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture* texture,
-               const SDL_Rect * srcrect, const SDL_Rect * dstrect);
+int SDL_D3D_renderCopyShd(SDL_Shader* shader, SDL_Texture** textures,
+		unsigned num_of_tex, SDL_Vertex* vertices, unsigned num_of_vert);
 
 
 SDL_Uniform* SDL_D3D_createUniform( SDL_Shader* shader, const char* name );

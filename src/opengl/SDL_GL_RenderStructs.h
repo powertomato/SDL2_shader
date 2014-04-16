@@ -46,9 +46,8 @@ typedef enum
 {
     GL_ATTRIBUTE_POSITION = 0,
     GL_ATTRIBUTE_TEXCOORD = 1,
-    GL_ATTRIBUTE_ANGLE = 2,
-    GL_ATTRIBUTE_CENTER = 3,
-} GLES2_Attribute;
+    GL_ATTRIBUTE_COLOR = 2
+} GL_Shader_Attribute;
 
 typedef struct
 {
@@ -150,6 +149,26 @@ typedef struct
 
     GL_FBOList *fbo;
 } GL_TextureData;
-
+#if (GL_TEXTURE0_ARB+1)!=(GL_TEXTURE1_ARB)
+#error "GL_TEXTUREx_ARB sequence static assertion"
+#endif
+#if (GL_TEXTURE0_ARB+2)!=(GL_TEXTURE2_ARB)
+#error "GL_TEXTUREx_ARB sequence static assertion"
+#endif
+#if (GL_TEXTURE0_ARB+3)!=(GL_TEXTURE3_ARB)
+#error "GL_TEXTUREx_ARB sequence static assertion"
+#endif
+#if (GL_TEXTURE0_ARB+4)!=(GL_TEXTURE4_ARB)
+#error "GL_TEXTUREx_ARB sequence static assertion"
+#endif
+#if (GL_TEXTURE0_ARB+5)!=(GL_TEXTURE5_ARB)
+#error "GL_TEXTUREx_ARB sequence static assertion"
+#endif
+#if (GL_TEXTURE0_ARB+6)!=(GL_TEXTURE6_ARB)
+#error "GL_TEXTUREx_ARB sequence static assertion"
+#endif
+#if (GL_TEXTURE0_ARB+7)!=(GL_TEXTURE7_ARB)
+#error "GL_TEXTUREx_ARB sequence static assertion"
+#endif
 #endif /*_SDL_GL_RenderStructs_h */
 

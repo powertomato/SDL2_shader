@@ -1,9 +1,9 @@
 #version 120
 
 uniform mat4 world_view_projection;
-uniform vec4 color;
 attribute vec4 position;
 attribute vec2 texCoords;
+attribute vec4 color;
 void main(void){
 	gl_FrontColor = color;
     //gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;

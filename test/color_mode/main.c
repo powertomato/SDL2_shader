@@ -212,11 +212,11 @@ int main(int argc, char** argv)
 			SDL_assert(fmt != NULL);
 		SDL_Surface* srf2 = SDL_ConvertSurface(srf, fmt, 0);
 			SDL_assert(srf2 != NULL);
-		//textures[i] = SDL_CreateTexture( renderer, formats[i], SDL_TEXTUREACCESS_STREAMING, srf->w, srf->h );
 		textures[i] = SDL_CreateTextureFromSurface(renderer, srf2 );
 
 		SDL_SetTextureBlendMode(textures[i], blendModes[current_blend]);
 		SDL_FreeSurface( srf2 );
+		SDL_FreeFormat(fmt);
 
 		if ( !textures[i] ){
 			return 1000 + i;
@@ -280,6 +280,8 @@ int main(int argc, char** argv)
 							break;
 					}
 					break;
+				case SDL_WINDOWEVENT:
+					SDL_updateViewport( shader );
 			}
 		}
 
