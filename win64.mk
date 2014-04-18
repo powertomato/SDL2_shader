@@ -5,7 +5,8 @@ DEFINES+=-DSDL_SHADER_D3D \
 TEST_CASES=color_mode \
 context_switch \
 all_the_shaders \
-vertex_buffer
+vertex_buffer \
+normal_map
 
 GCC=x86_64-w64-mingw32-gcc
 GPP=x86_64-w64-mingw32-g++

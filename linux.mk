@@ -5,7 +5,8 @@ DEFINES+=-DSDL_SHADER_OPENGL \
 TEST_CASES=color_mode \
 context_switch \
 all_the_shaders \
-vertex_buffer
+vertex_buffer \
+normal_map
 
 GCC=gcc
 GPP=g++
