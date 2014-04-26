@@ -70,9 +70,9 @@ void SDL_D3D_getVertex( SDL_Vertex* vertices, unsigned num,
 	if( g ) (*g) = (uint8_t) ((color & 0x0000FF00)>> 8);
 	if( b ) (*b) = (uint8_t) (color & 0x000000FF);
 
-	if( x ) (*x) = (vbuff[num].x );
-	if( y ) (*y) = (vbuff[num].y );
-	if( z ) (*z) = (vbuff[num].z );
+	if( x ) (*x) = (vbuff[num].x - 0.5);
+	if( y ) (*y) = (vbuff[num].y - 0.5);
+	if( z ) (*z) = (vbuff[num].z - 0.5);
 
 	if( tex_s ) (*tex_s) = (vbuff[num].u );
 	if( tex_t ) (*tex_t) = (vbuff[num].v );
@@ -93,9 +93,9 @@ void SDL_D3D_setVertexPosition(SDL_Vertex* vertices, unsigned from,
 	SDL_D3D_Vertex_t* vbuff = (SDL_D3D_Vertex_t*) vertices->vertexBuffer;
 	unsigned i;
 	for ( i=from; i<from+num; i++ ) {
-		vbuff[i].x = x;
-		vbuff[i].y = y;
-		vbuff[i].z = z;
+		vbuff[i].x = x+0.5;
+		vbuff[i].y = y+0.5;
+		vbuff[i].z = z+0.5;
 	}
 }
 void SDL_D3D_setVertexTexCoord(SDL_Vertex* vertices, unsigned from,
@@ -230,11 +230,17 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
 	shader->createVertexBuffer = SDL_D3D_createVertexBuffer;
 	shader->destroyVertexBuffer = SDL_D3D_destroyVertexBuffer;
 
+	shader_data->pixl_shader = NULL;
+	shader_data->vert_shader = NULL;
+	shader_data->pixl_symtable = NULL;
+	shader_data->vert_symtable = NULL;
+
 	HRESULT result;
 
 	LPD3DXBUFFER code,error;
 	char shader_version[8] = "vs_x_x";
 
+	
 	char* buff = SDL_Shader_readRW( shdstream->vshader );
 	if( !buff ){
 		SDL_OutOfMemory();
@@ -259,12 +265,12 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
 		SDL_SetError("SDL_Shader: D3D CreateVertexShader() failed, errno %d\n", result);
 		return NULL;
 	}
-
 	shader_version[0] = 'p';
 	shader_version[3] = '0'+ps_version_major;
 	shader_version[5] = '0'+ps_version_minor;
 	result = D3DXCompileShader(buff, strlen(buff), NULL, NULL, "PixelShaderMain",
 		shader_version, 0, &code, &error, &(shader_data->pixl_symtable));
+	printf("result %d\n", result);
 	if ( FAILED(result)){
 		shader->destroyShader(shader);
 		SDL_SetError("SDL_Shader: D3D CompilelShader() failed: \n--\n%s--\n", ID3DXBuffer_GetBufferPointer( error ));

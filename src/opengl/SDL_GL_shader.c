@@ -76,6 +76,7 @@ typedef struct {
 
 	SDL_Uniform* vport;
 	SDL_Uniform* color_mode;
+	Uint32 is_target;
 } SDL_GL_ShaderData;
 
 typedef struct {
@@ -274,6 +275,7 @@ static void SDL_GL_updateViewport( SDL_Shader* shader ) {
 		projection[0][1] = 0.0f;
 		projection[0][2] = 0.0f;
 		projection[0][3] = 0.0f;
+
 		projection[1][0] = 0.0f;
 		if (renderer->target) {
 			projection[1][1] = 2.0f / h;
@@ -282,10 +284,12 @@ static void SDL_GL_updateViewport( SDL_Shader* shader ) {
 		}
 		projection[1][2] = 0.0f;
 		projection[1][3] = 0.0f;
+
 		projection[2][0] = 0.0f;
 		projection[2][1] = 0.0f;
 		projection[2][2] = 0.0f;
 		projection[2][3] = 0.0f;
+
 		projection[3][0] = -1.0f;
 		if (renderer->target) {
 			projection[3][1] = -1.0f;
@@ -374,6 +378,7 @@ SDL_Shader* SDL_GL_createShader( SDL_Renderer* renderer,
 
 	v = glCreateShader( GL_VERTEX_SHADER );
 	f = glCreateShader( GL_FRAGMENT_SHADER );
+	shader_data->is_target = renderer->target != NULL;
 	shader_data->vport = NULL;
 	shader_data->color_mode = NULL;
 
@@ -525,14 +530,19 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture** textures,
 				&tex_s, &tex_t);
 		vertices->setVertexTexCoord( vertices, i, 1,
 			tex_s * texturedata->texw, tex_t * texturedata->texh );
-
 	}
-
 
 	data = (GL_RenderData *) shader->renderer->driverdata;
 	shader_data = (SDL_GL_ShaderData *) shader->driver_data;
 
 	SDL_GL_MakeCurrent(shader->renderer->window, data->context);
+
+	shader->bindShader(shader);
+	if ( (shader->renderer->target == NULL && shader_data->is_target) ||
+			(shader->renderer->target != NULL && !shader_data->is_target) ) {
+		SDL_GL_updateViewport(shader);
+		shader_data->is_target = shader->renderer->target != NULL;
+	}
 
 	for ( i=num_of_tex; i<8; i++ ) {
 		glActiveTextureARB( GL_TEXTURE0_ARB + i );
@@ -545,7 +555,6 @@ int SDL_GL_renderCopyShd(SDL_Shader* shader, SDL_Texture** textures,
 	}
 	glActiveTextureARB( GL_TEXTURE0_ARB );
 
-	shader->bindShader(shader);
 	/* invalidate SDLs intern shader */
 	data->current.shader = SHADER_NONE;
 

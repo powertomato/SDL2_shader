@@ -6,7 +6,8 @@ TEST_CASES=color_mode \
 context_switch \
 all_the_shaders \
 vertex_buffer \
-normal_map
+normal_map \
+scale2x
 
 GCC=gcc
 GPP=g++

@@ -35,6 +35,7 @@ typedef struct {
 
 	SDL_Uniform* vport;
 	SDL_Uniform* color_mode;
+	Uint32 is_target;
 } SDL_GLES2_ShaderData;
 extern char* SDL_Shader_readRW( SDL_RWops* rwop );
 
@@ -301,6 +302,7 @@ SDL_Shader* SDL_GLES2_createShader( SDL_Renderer* renderer,
 	shader_data->p = 0;
 	v = glCreateShader( GL_VERTEX_SHADER );
 	f = glCreateShader( GL_FRAGMENT_SHADER );
+	shader_data->is_target = renderer->target != NULL;
 	shader_data->vport = NULL;
 	shader_data->color_mode = NULL;
 
@@ -438,6 +440,13 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture** textures,
 
 	SDL_GL_MakeCurrent(shader->renderer->window, data->context);
 
+	shader->bindShader(shader);
+	if ( (shader->renderer->target == NULL && shader_data->is_target) ||
+			(shader->renderer->target != NULL && !shader_data->is_target) ) {
+		SDL_GLES2_updateViewport(shader);
+		shader_data->is_target = shader->renderer->target != NULL;
+	}
+
 	for ( i=num_of_tex; i<8; i++ ) {
 		data->glActiveTexture( GL_TEXTURE0 + i );
 		glDisable(GL_TEXTURE_2D);
@@ -449,10 +458,14 @@ int SDL_GLES2_renderCopyShd(SDL_Shader* shader, SDL_Texture** textures,
 		glEnable(GL_TEXTURE_2D);
 	}
 
-	shader->bindShader(shader);
-
-	if ( shader_data->color_mode ) {
-		SDL_GLES2_setUniform_i( shader_data->color_mode, textures[0]->format);
+	if ( shader_data->is_target ) {
+		if ( shader_data->color_mode ) {
+			SDL_GLES2_setUniform_i( shader_data->color_mode, shader->renderer->target->format);
+		}
+	} else {
+		if ( shader_data->color_mode ) {
+			SDL_GLES2_setUniform_i( shader_data->color_mode, textures[0]->format);
+		}
 	}
 
     if (textures[0]->blendMode != data->current.blendMode) {
