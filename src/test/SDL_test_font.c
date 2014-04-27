@@ -30,8 +30,8 @@
 
 //#include "SDL_config.h"
 
-#include <SDL2/SDL_test.h>
-#include <SDL2/SDL_test_font.h>
+#include <SDL2/SDL.h>
+//#include <SDL2/SDL_test_font.h>
 
 #define FONT_CHARACTER_SIZE 8
 

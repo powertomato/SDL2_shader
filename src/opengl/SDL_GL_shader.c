@@ -62,7 +62,12 @@ SDL_PROC(void, glActiveTextureARB, (GLenum) )
 #endif
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+
+#ifdef __MACOSX__
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
+#endif
 
 #include "../SDL_shader.h"
 #include "SDL_GL_shader.h"

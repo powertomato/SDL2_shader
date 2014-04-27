@@ -2,8 +2,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_test_font.h>
+#ifdef __MACOSX__
+#include <SDL2_image/SDL_image.h>
+#else
 #include <SDL2/SDL_image.h>
+#endif
+#include "../src/test/SDL_test_font.h"
 #include "../src/SDL_shader.h"
 #include "../src/SDL_SYS_RenderStructs.h"
 #include <math.h>
