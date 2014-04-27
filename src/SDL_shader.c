@@ -94,7 +94,7 @@ SDL_ShaderFileNames SDL_getShaderFileNames( SDL_Renderer* renderer,
 
 	char* vshd_ext;
 	char* pshd_ext;
-	int vshd_ext_len;
+	int vshd_ext_len=-1;
 	int pshd_ext_len;
 #ifdef SDL_SHADER_OPENGL
 	char vshd_ext_gl[] = ".gl.vert";
@@ -128,8 +128,10 @@ SDL_ShaderFileNames SDL_getShaderFileNames( SDL_Renderer* renderer,
 #ifdef SDL_SHADER_D3D11
 	
 #endif
-
 	SDL_ShaderFileNames ret = {NULL,NULL};
+	if ( vshd_ext_len == -1 ) {
+		return ret;	
+	}
 	int name_len = strlen( name );
 
 	ret.vshader = malloc(name_len + vshd_ext_len + 1 );

@@ -70,7 +70,6 @@ struct SDL_Texture
     SDL_Texture *next;
 };
 
-typedef struct SDL_Renderer SDL_Renderer;
 struct SDL_Renderer
 {
     const void *magic;
