@@ -24,6 +24,7 @@ test
 # objects needed for the test cases
 TEST_OBJ=test/SDL_test_font.o
 TEST_BIN=$(TEST_CASES:%=$(TESTBIN)/test_%$(EXE_EXT))
+TEST_LDFLAGS=-L. -lSDL2_shader
 
 
 INCLUDE=
@@ -59,7 +60,11 @@ builddirs:
 test: $(OBJECTS) $(TEST_OBJECTS) runtest
 
 runtest: $(TEST_BIN)
-	@$(foreach TEST_CASE,$(TEST_CASES),echo -e $(GREEN)"### Testing: $(TEST_CASE) ###"$(CLR) &&  cd $(TESTBIN) && $(RUN) ./test_$(TEST_CASE)$(EXE_EXT) && cd ../.. ;)
+	@$(foreach TEST_CASE,$(TEST_CASES),                        \
+		echo -e $(GREEN)"### Testing: $(TEST_CASE) ###"$(CLR); \
+		cd $(TESTBIN);                                         \
+		$(RUN) ./test_$(TEST_CASE)$(EXE_EXT);                  \
+		cd ../.. ;)
 
 $(OBJPATH)/%.o : $(SRCPATH)/%.cpp
 	@echo "$(GPP) (CPPFLAGS) -c $< -o $@"
@@ -71,7 +76,8 @@ $(OBJPATH)/%.o : $(SRCPATH)/%.c
 	
 $(TESTBIN)/test_%$(EXE_EXT) : $(TESTPATH)/%/main.c
 	@echo "$(GCC) (CFLAGS) (OBJECTS) $< -o $@"
-	@$(GCC) $(CFLAGS) $(INCLUDE) -I$(SRCPATH) $(OBJECTS) $(TEST_OBJECTS) $< $(LDFLAGS) -o $@
+	@$(GCC) $(CFLAGS) $(INCLUDE) -I$(SRCPATH) $(TEST_OBJECTS) \
+		$< $(LDFLAGS) $(TEST_LDFLAGS) -o $@
 clean_test:
 	$(RM) $(TEST_BIN)
 
