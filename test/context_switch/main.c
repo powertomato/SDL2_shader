@@ -41,17 +41,6 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-
-	SDL_version compiled;
-	SDL_version linked;
-
-	SDL_VERSION(&compiled);
-	SDL_GetVersion(&linked);
-	printf("We compiled against SDL version %d.%d.%d ...\n",
-			compiled.major, compiled.minor, compiled.patch);
-	printf("But we are linking against SDL version %d.%d.%d.\n",
-			linked.major, linked.minor, linked.patch);
-
 	SDL_SetHint( SDL_HINT_RENDER_DRIVER, getenv("RENDER_DRIVER") ); 
 
 	int width = 800;

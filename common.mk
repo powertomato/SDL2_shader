@@ -47,7 +47,9 @@ YELLOW="\x1b[33;01m"
 endif
 
 
-all: builddirs flags $(OBJECTS)
+all: libSDL2_shader.a flags
+
+libSDL2_shader.a: builddirs $(OBJECTS)
 	$(AR) rcs libSDL2_shader.a $(OBJECTS)
 
 flags:
@@ -57,7 +59,7 @@ flags:
 builddirs:
 	@$(MKDIR_LIST) $(BUILDDIRS)
 
-test: $(OBJECTS) $(TEST_OBJECTS) runtest
+test: libSDL2_shader.a $(TEST_OBJECTS) runtest
 
 runtest: $(TEST_BIN)
 	@$(foreach TEST_CASE,$(TEST_CASES),                        \
@@ -74,7 +76,7 @@ $(OBJPATH)/%.o : $(SRCPATH)/%.c
 	@echo "$(GCC) (CFLAGS) -c $< -o $@"
 	@$(GCC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 	
-$(TESTBIN)/test_%$(EXE_EXT) : $(TESTPATH)/%/main.c
+$(TESTBIN)/test_%$(EXE_EXT) : $(TESTPATH)/%/main.c libSDL2_shader.a
 	@echo "$(GCC) (CFLAGS) (OBJECTS) $< -o $@"
 	@$(GCC) $(CFLAGS) $(INCLUDE) -I$(SRCPATH) $(TEST_OBJECTS) \
 		$< $(LDFLAGS) $(TEST_LDFLAGS) -o $@

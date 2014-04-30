@@ -31,6 +31,18 @@
 
 #include <stdio.h>
 SDL_Shader* SDL_createShader( SDL_Renderer *renderer, const char* name ) {
+
+	SDL_version linked;
+	SDL_GetVersion(&linked);
+	if ( !( linked.major >= 2 && linked.minor >= 0 && linked.patch >= 1) ) {
+		SDL_SetError("SDL_Shader: Linked SDL_version must be atleast 2.0.1\n");
+		return NULL;
+	}
+
+	if ( linked.major >= 2 && linked.minor >= 0 && linked.patch >=  4 ) {
+		fprintf(stderr,"WARN: [SDL_Shader] Linked SDL_version is atleast 2.0.4, this is untested\n");
+	}
+
 	SDL_ShaderFileNames names = SDL_getShaderFileNames( renderer, name );
 	SDL_ShaderStream stream = SDL_getShaderStream( &names, 1 );
 	return SDL_createShader_RW( renderer, &stream, 1 );
