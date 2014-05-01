@@ -270,7 +270,6 @@ SDL_Shader* SDL_D3D_createShader( SDL_Renderer* renderer,
 	shader_version[5] = '0'+ps_version_minor;
 	result = D3DXCompileShader(buff, strlen(buff), NULL, NULL, "PixelShaderMain",
 		shader_version, 0, &code, &error, &(shader_data->pixl_symtable));
-	printf("result %d\n", result);
 	if ( FAILED(result)){
 		shader->destroyShader(shader);
 		SDL_SetError("SDL_Shader: D3D CompilelShader() failed: \n--\n%s--\n", ID3DXBuffer_GetBufferPointer( error ));

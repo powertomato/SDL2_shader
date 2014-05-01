@@ -82,14 +82,11 @@ denotes the feature is beeing worked on.
 Beta milestones
 ---------------
 This is the stuff which needs to be done for a beta release.
- * SDL_renderCopyShdArray (for rendering an array of triangles and textures)
- * Reserve window events to restore view-projection matrix
  * Doxygen-documentation
- * Testcase for SDL_renderCopyShdArray
  * Testcase for SDL_uniform* functions
  * integrate a testing framework
  * testcase automation
- * Makefiles for MacOS, iOS and android
+ * Makefiles for iOS and android
  * An other pass of code cleanup
 
 High priority
